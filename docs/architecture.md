@@ -14,7 +14,7 @@
 - **配置热重载**: 不重启服务即可更新配置
 - **动态日志**: 运行时切换日志级别
 - **Bearer 认证**: 标准 Token 认证
-- **Provider 白名单**: 仅启用指定 g4f provider，并按模型前缀过滤
+- **Provider 白名单**: 仅启用网页封装类 g4f provider（不使用 API Key），并按模型前缀过滤
 
 ### 1.3 技术栈
 | 组件 | 技术 | 版本 |
@@ -143,7 +143,7 @@ g4f:
     enabled: true
     max_retries: 2
     timeout: 30
-  # 说明：g4f 的模型可用性依赖 provider 状态，部分模型可能需要 API Key/Cookies/HAR
+  # 说明：仅启用无需 API Key 的网页封装 provider；模型可用性依赖 provider 状态与 Cookies/HAR
   # 建议：通过 g4f /v1/providers/{id} 聚合模型列表后再过滤
 ```
 
@@ -393,7 +393,7 @@ class GeminiProvider(BaseProvider):
 
 ### 6.4 Provider 白名单与模型聚合
 
-- g4f provider 仅启用 `g4f.providers` 白名单中的 provider。
+- g4f provider 仅启用 `g4f.providers` 白名单中的网页封装 provider（排除需要 API Key 的 provider）。
 - 网关会从 g4f `/v1/providers/{id}` 聚合模型列表。
 - 对外 `/v1/models` 仅返回匹配 `g4f.model_prefixes` 的模型。
 - 如果聚合失败，保留上一次缓存列表并记录告警。

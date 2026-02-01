@@ -53,7 +53,7 @@ g4f:
     enabled: true      # Gemini 失败时尝试 G4F
     max_retries: 2
     timeout: 30        # 秒
-  # 提示：可通过 g4f 的 /v1/providers/{id} 聚合模型列表后再做前缀过滤
+  # 提示：仅启用无需 API Key 的网页封装 provider；通过 g4f /v1/providers/{id} 聚合模型列表后再做前缀过滤
 ```
 
 ### 1.1 推荐模型前缀表（g4f）
@@ -85,7 +85,7 @@ g4f:
 
 ### 2.1 g4f Cookies/HAR（可选）
 
-部分 g4f provider 需要浏览器 Cookies 或 `.har` 文件授权，建议将文件放入 `har_and_cookies/` 目录并挂载到容器：
+部分网页封装类 g4f provider 需要浏览器 Cookies 或 `.har` 文件授权，建议将文件放入 `har_and_cookies/` 目录并挂载到容器：
 
 ```bash
 mkdir -p har_and_cookies generated_media

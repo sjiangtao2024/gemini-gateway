@@ -5,7 +5,7 @@
 **症状**: `/v1/models` 返回空列表或调用报 `provider_error`。
 
 **排查步骤**:
-1) 检查 `g4f.providers` 白名单是否正确（大小写需匹配）。
+1) 检查 `g4f.providers` 白名单是否正确（大小写需匹配，且仅选择无需 API Key 的网页封装 provider）。
 2) 访问 g4f `GET /v1/providers` 与 `GET /v1/providers/{id}` 确认 provider 在线。
 3) 若 provider 需要 cookies/HAR，检查 `har_and_cookies/` 是否挂载且文件可读。
 4) 若使用浏览器类 provider，确认容器内 Chrome/Chromium 可用且 `shm_size` 足够。
