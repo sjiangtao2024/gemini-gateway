@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  gemini-gateway:
+    build: .
+    container_name: gemini-gateway
+    ports:
+      - "8022:8022"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/config/config.yaml
+      - G4F_ENABLED=false
+    volumes:
+      - ./:/app
+      - ./config:/app/config
+      - ./cookies:/app/cookies
+      - ./logs:/app/logs
+      - ./har_and_cookies:/app/har_and_cookies
+      - ./generated_media:/app/generated_media
+    command: >
+      bash -lc "uv pip install -r /app/requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8022 --reload"
+    restart: unless-stopped

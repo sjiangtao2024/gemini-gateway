@@ -1,0 +1,9 @@
+.git/
+.worktrees/
+.venv/
+__pycache__/
+*.pyc
+logs/
+cookies/
+har_and_cookies/
+generated_media/
