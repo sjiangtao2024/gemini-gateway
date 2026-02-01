@@ -69,6 +69,7 @@ claude --model gemini-2.5-pro
 - [API 规范](docs/api-spec.md) - 完整的 API 接口文档
 - [配置示例](docs/config-examples.md) - 配置文件参考
 - [部署指南](docs/deployment.md) - 详细部署步骤
+- [故障排查](docs/troubleshooting.md) - 常见问题定位
 
 ## 🏗️ 项目结构
 
@@ -90,24 +91,6 @@ gemini-gateway/
 └── requirements.txt
 ```
 
-## 🔧 支持的模型
-
-### Gemini（主力）
-- `gemini-2.5-pro`
-- `gemini-2.5-flash`
-- `gemini-3.0-pro`
-- `gemini-2.0-flash`
-
-### ChatGPT（备选，通过 gpt4free）
-- `gpt-4o`
-- `gpt-4o-mini`
-- `gpt-4`
-
-### Claude（备选，通过 gpt4free）
-- `claude-3-opus`
-- `claude-3-sonnet`
-- `claude-3-haiku`
-
 ## 🛠️ 管理接口
 
 ```bash
@@ -126,31 +109,16 @@ curl -X POST http://localhost:8022/admin/config/reload \
   -H "Authorization: Bearer your-token"
 ```
 
-## 📝 开发计划
+## ✅ 验证步骤（开发）
 
-- [x] 架构设计
-- [ ] 基础框架（配置、日志、认证）
-- [ ] Gemini Provider 实现
-- [ ] OpenAI 协议支持
-- [ ] Claude 协议支持
-- [ ] GPT4Free 集成
-- [ ] Docker 部署
-- [ ] 测试与文档
+> 使用 uv 管理 Python 环境。
 
-## ⚠️ 注意事项
-
-1. **Cookie 有效期**: Gemini Cookie 需要定期更新，可通过 `/admin/cookies` 接口更新
-2. **gpt4free 稳定性**: 免费服务可能不稳定，建议 Gemini 为主
-3. **流式响应**: Gemini 不原生支持流式，通过模拟实现
-4. **许可证**: 本项目使用 MIT 许可证，gemini-webapi 使用 AGPL-3.0
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 PR！
-
-## 📄 许可证
-
-[MIT](LICENSE)
+```bash
+uv venv .venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
+pytest -v
+```
 
 ---
 
