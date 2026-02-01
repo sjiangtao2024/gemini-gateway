@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 
 from app.auth.middleware import auth_middleware
+from app.routes.openai import router as openai_router
 
 app = FastAPI()
 app.middleware("http")(auth_middleware)
+app.include_router(openai_router)
 
 
 @app.get("/health")
