@@ -56,6 +56,16 @@ g4f:
   # 提示：可通过 g4f 的 /v1/providers/{id} 聚合模型列表后再做前缀过滤
 ```
 
+### 1.1 推荐模型前缀表（g4f）
+
+| Provider | 推荐前缀 | 示例 |
+|----------|----------|------|
+| Qwen | `qwen-` | `qwen-2.5`, `qwen-2.5-instruct` |
+| Kimi | `kimi-` | `kimi-k1`, `kimi-1.5` |
+| GLM | `glm-` | `glm-4`, `glm-4v` |
+| Minimax | `minimax-` | `minimax-01`, `minimax-01-chat` |
+| Grok | `grok-` | `grok-2`, `grok-2-mini` |
+
 ## 2. Cookie 文件 (cookies/gemini.json)
 
 ```json

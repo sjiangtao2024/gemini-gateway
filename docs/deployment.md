@@ -434,3 +434,7 @@ crontab -e
 ---
 
 *部署指南版本: 1.0*
+
+## 13. 常见问题快速定位
+
+更多排查步骤请参考 `docs/troubleshooting.md`。

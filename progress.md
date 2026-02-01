@@ -83,3 +83,5 @@
 - Noted apply_patch context mismatch in docs/architecture.md; will re-edit with smaller patches.
 - Updated docs: `docs/api-spec.md`, `docs/architecture.md`, `docs/deployment.md`, `docs/config-examples.md` for multimodal + provider controls.
 - Added OpenAI /v1/images field mapping matrix and capability boundaries in docs/api-spec.md.
+- Starting docs additions: model prefix table, /v1/models aggregation flow, troubleshooting guide.
+- Added troubleshooting guide and linked it from deployment docs.

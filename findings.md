@@ -104,3 +104,6 @@
 - Updated docs to include OpenAI-compatible /v1/images, Claude text-only note, provider whitelist/prefix filtering, and dynamic model aggregation via g4f providers.
 - Added Docker guidance for g4f browser dependencies, shm_size, har_and_cookies, generated_media, and optional 7900 login port.
 - Added /v1/images field mapping matrix and capability boundaries to docs/api-spec.md for OpenAI-compatible image requests.
+- User requested additional docs: recommended model prefix table, /v1/models aggregation flow diagram, and troubleshooting guide.
+- Added recommended g4f model prefix table to docs/config-examples.md and /v1/models aggregation flow to docs/api-spec.md.
+- Added docs/troubleshooting.md and linked from docs/deployment.md.

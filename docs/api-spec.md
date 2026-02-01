@@ -26,6 +26,15 @@ GET /v1/models
 Authorization: Bearer <token>
 ```
 
+**动态聚合流程（示意）**:
+```
+g4f /v1/providers  →  过滤 providers 白名单
+        ↓
+g4f /v1/providers/{id}  →  聚合 models
+        ↓
+前缀过滤 (g4f.model_prefixes)  →  /v1/models 响应
+```
+
 **响应（示例）**:
 ```json
 {
