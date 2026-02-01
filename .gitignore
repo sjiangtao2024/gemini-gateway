@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Environments
+.venv/
+venv/
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Runtime secrets/config
+config/config.yaml
+cookies/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Build
+build/
+dist/
+*.egg-info/
