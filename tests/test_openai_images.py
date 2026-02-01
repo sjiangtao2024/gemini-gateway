@@ -1,0 +1,13 @@
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+def test_images_requires_prompt():
+    client = TestClient(app)
+    resp = client.post(
+        "/v1/images",
+        headers={"Authorization": "Bearer test"},
+        json={"model": "gemini-2.5-pro"},
+    )
+    assert resp.status_code == 422

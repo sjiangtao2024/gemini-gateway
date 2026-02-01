@@ -26,3 +26,18 @@ async def test_list_models_filters_prefixes():
         models = await provider.list_models()
 
     assert [m["id"] for m in models] == ["qwen-2.5"]
+
+
+@pytest.mark.anyio
+async def test_chat_completions_proxy():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/chat/completions":
+            return httpx.Response(200, json={"id": "chatcmpl-test"})
+        return httpx.Response(404, json={"error": "not found"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, base_url="http://g4f") as client:
+        provider = G4FProvider(base_url="http://g4f", client=client)
+        resp = await provider.chat_completions({"model": "qwen-2.5", "messages": []})
+
+    assert resp["id"] == "chatcmpl-test"

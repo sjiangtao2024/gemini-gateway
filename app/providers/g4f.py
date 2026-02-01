@@ -38,6 +38,19 @@ class G4FProvider(BaseProvider):
         resp.raise_for_status()
         return resp.json()
 
+    async def _post_json(self, path: str, payload: dict) -> Any:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=self._timeout) as client:
+            resp = await client.post(path, json=payload)
+            resp.raise_for_status()
+            return resp.json()
+
+    async def _post_json_with_client(self, path: str, payload: dict) -> Any:
+        if self._client is None:
+            return await self._post_json(path, payload)
+        resp = await self._client.post(path, json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
     async def list_models(self) -> list[dict]:
         providers = await self._get_json_with_client("/v1/providers")
         provider_ids = [p.get("id") for p in providers if p.get("id")]
@@ -51,5 +64,5 @@ class G4FProvider(BaseProvider):
         filtered = self.registry.filter_models(models)
         return [{"id": model, "object": "model", "owned_by": "g4f"} for model in sorted(set(filtered))]
 
-    async def chat_completions(self, *args, **kwargs) -> dict:
-        return {"id": "stub"}
+    async def chat_completions(self, payload: dict) -> dict:
+        return await self._post_json_with_client("/v1/chat/completions", payload)
