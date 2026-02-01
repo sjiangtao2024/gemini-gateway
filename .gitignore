@@ -23,6 +23,7 @@ cookies/
 .DS_Store
 .idea/
 .vscode/
+.worktrees/
 
 # Build
 build/
