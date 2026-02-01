@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from app.providers.g4f import G4FProvider
 from app.providers.gemini import GeminiProvider
-from app.services.stream import stream_chunks
+from app.services.stream import sse_chat_chunks
 
 router = APIRouter()
 
@@ -51,7 +51,7 @@ async def chat_completions(payload: dict):
         result = await _gemini.chat_completions(messages=messages, model=model)
         text = result.get("text", "")
         if stream:
-            return StreamingResponse((chunk for chunk in stream_chunks([text])), media_type="text/event-stream")
+            return StreamingResponse(sse_chat_chunks(text, model), media_type="text/event-stream")
         return {
             "id": "chatcmpl-gemini",
             "object": "chat.completion",
