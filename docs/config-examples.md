@@ -35,20 +35,25 @@ gemini:
 
 g4f:
   enabled: true
-  models:
-    - "gpt-4o"
-    - "gpt-4o-mini"
-    - "claude-3-opus"
-    - "claude-3-sonnet"
-    # 以下为示例占位，需按 g4f provider 当前支持的 model id 填写
-    - "deepseek-*"
-    - "qwen-*"
-    - "grok-*"
+  providers:
+    - "Qwen"
+    - "Kimi"
+    - "GLM"
+    - "Minimax"
+    - "Grok"
+  model_prefixes:
+    - "qwen-"
+    - "kimi-"
+    - "glm-"
+    - "minimax-"
+    - "grok-"
+  cookies_dir: "/app/har_and_cookies"
+  generated_media_dir: "/app/generated_media"
   fallback:
     enabled: true      # Gemini 失败时尝试 G4F
     max_retries: 2
     timeout: 30        # 秒
-  # 提示：可通过 g4f 的 /v1/providers 接口查看可用 provider 与模型列表
+  # 提示：可通过 g4f 的 /v1/providers/{id} 聚合模型列表后再做前缀过滤
 ```
 
 ## 2. Cookie 文件 (cookies/gemini.json)
@@ -68,6 +73,16 @@ g4f:
 3. 复制 `__Secure-1PSID` 和 `__Secure-1PSIDTS` 的值
 4. 粘贴到上面的 JSON 文件中
 
+### 2.1 g4f Cookies/HAR（可选）
+
+部分 g4f provider 需要浏览器 Cookies 或 `.har` 文件授权，建议将文件放入 `har_and_cookies/` 目录并挂载到容器：
+
+```bash
+mkdir -p har_and_cookies generated_media
+```
+
+> 注意：`.har` 与 cookies 含敏感凭据，禁止提交到版本库。
+
 ## 3. Docker Compose 配置
 
 ### 3.1 标准部署
@@ -86,6 +101,10 @@ services:
       - ./config/config.yaml:/app/config/config.yaml:ro
       # Cookie 文件（读写挂载）
       - ./cookies:/app/cookies
+      # g4f cookies/HAR（可选）
+      - ./har_and_cookies:/app/har_and_cookies
+      # g4f 生成媒体（可选）
+      - ./generated_media:/app/generated_media
       # 日志目录
       - ./logs:/app/logs
     environment:
@@ -113,6 +132,8 @@ services:
     volumes:
       - ./config/config.yaml:/app/config/config.yaml:ro
       - ./cookies:/app/cookies
+      - ./har_and_cookies:/app/har_and_cookies
+      - ./generated_media:/app/generated_media
       - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
@@ -142,6 +163,8 @@ services:
       # 配置热重载
       - ./config:/app/config
       - ./cookies:/app/cookies
+      - ./har_and_cookies:/app/har_and_cookies
+      - ./generated_media:/app/generated_media
       - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
@@ -160,6 +183,10 @@ services:
 | `LOG_LEVEL` | 日志级别 | `DEBUG`, `INFO`, `ERROR` |
 | `BEARER_TOKEN` | 认证令牌（优先于配置文件） | `your-token` |
 | `GEMINI_PROXY` | Gemini 代理 | `http://proxy:8080` |
+| `G4F_PROVIDERS` | g4f provider 白名单（逗号分隔） | `Qwen,Kimi,GLM,Minimax,Grok` |
+| `G4F_MODEL_PREFIXES` | g4f 模型前缀白名单（逗号分隔） | `qwen-,kimi-,glm-,minimax-,grok-` |
+| `G4F_COOKIES_DIR` | g4f cookies/HAR 目录 | `/app/har_and_cookies` |
+| `G4F_GENERATED_MEDIA_DIR` | g4f 生成媒体目录 | `/app/generated_media` |
 
 ### 使用环境变量的 Docker Compose
 
@@ -186,13 +213,17 @@ BEARER_TOKEN=your-secure-token-here
 
 ### 4.1 g4f 模型列表自动同步（可选）
 
-以下脚本会从 g4f 的 `/v1/providers` 与 `/v1/providers/{id}` 拉取可用模型列表，输出为可直接粘贴到 `config.yaml` 的 `g4f.models` 片段。
+以下脚本会从 g4f 的 `/v1/providers` 与 `/v1/providers/{id}` 拉取可用模型列表，并根据 provider 白名单与模型前缀过滤后输出为可直接粘贴到 `config.yaml` 的 `g4f.model_prefixes`/`g4f.providers` 参考结果。
 
 ```bash
 # 可选：指定 g4f API 基础地址（默认本地 1337）
 export G4F_BASE_URL=http://localhost:1337/v1
 # 可选：仅同步指定 provider（如 HuggingChat）
-export G4F_PROVIDER=HuggingChat
+export G4F_PROVIDER=Qwen
+# 可选：指定多个 provider 白名单（逗号分隔）
+export G4F_PROVIDERS=Qwen,Kimi,GLM,Minimax,Grok
+# 可选：模型前缀过滤（逗号分隔）
+export G4F_MODEL_PREFIXES=qwen-,kimi-,glm-,minimax-,grok-
 
 python - <<'PY'
 import json
@@ -202,6 +233,9 @@ from urllib.request import urlopen
 
 base_url = os.getenv("G4F_BASE_URL", "http://localhost:1337/v1").rstrip("/")
 provider_filter = os.getenv("G4F_PROVIDER")
+provider_whitelist = os.getenv("G4F_PROVIDERS")
+prefixes_env = os.getenv("G4F_MODEL_PREFIXES")
+prefixes = [p.strip() for p in (prefixes_env or "").split(",") if p.strip()]
 
 def get_json(url: str):
     with urlopen(url) as resp:
@@ -211,15 +245,29 @@ providers = get_json(f"{base_url}/providers")
 provider_ids = [p["id"] for p in providers]
 if provider_filter:
     provider_ids = [pid for pid in provider_ids if pid == provider_filter]
+if provider_whitelist:
+    allowed = {p.strip() for p in provider_whitelist.split(",") if p.strip()}
+    provider_ids = [pid for pid in provider_ids if pid in allowed]
 
 models = set()
+def allowed_model(model: str) -> bool:
+    if not prefixes:
+        return True
+    return any(model.startswith(p) for p in prefixes)
+
 for pid in provider_ids:
     details = get_json(f"{base_url}/providers/{pid}")
     for m in details.get("models", []):
-        models.add(m)
+        if allowed_model(m):
+            models.add(m)
 
 print("g4f:")
-print("  models:")
+print("  providers:")
+for pid in sorted(provider_ids):
+    print(f"    - \"{pid}\"")
+print("  model_prefixes:")
+for p in prefixes:
+    print(f"    - \"{p}\"")
 for m in sorted(models):
     print(f"    - \"{m}\"")
 PY

@@ -75,3 +75,11 @@
   - 在配置文档中补充 g4f 模型列表自动同步脚本示例
 - Files created/modified:
   - `/home/yukun/dev/gemini-business-automation/gemini-api/docs/config-examples.md`
+
+## 2026-02-01
+- Collected gaps in `docs/api-spec.md` and `docs/deployment.md` (images endpoint, provider/cookies/Chrome notes).
+- Logged doc gaps for architecture/config examples (multimodal + provider whitelist + dynamic model aggregation).
+- Updated task plan with Phase 5 (docs updates) and set to in_progress.
+- Noted apply_patch context mismatch in docs/architecture.md; will re-edit with smaller patches.
+- Updated docs: `docs/api-spec.md`, `docs/architecture.md`, `docs/deployment.md`, `docs/config-examples.md` for multimodal + provider controls.
+- Added OpenAI /v1/images field mapping matrix and capability boundaries in docs/api-spec.md.

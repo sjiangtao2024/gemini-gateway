@@ -7,12 +7,14 @@
 
 ### 1.2 核心特性
 - **双协议支持**: OpenAI (`/v1/chat/completions`) + Claude (`/v1/messages`)
-- **多模型接入**: Gemini (主力) + ChatGPT (备选，通过 gpt4free)
+- **多模型接入**: Gemini (主力) + ChatGPT/Claude/其他开源模型 (备选，通过 gpt4free)
 - **模型透传**: 直接暴露 `gemini-2.5-pro`、`gpt-4o` 等真实模型名
+- **多模态支持**: OpenAI 兼容 `/v1/images` 图像生成接口
 - **流式响应**: SSE (Server-Sent Events) 支持
 - **配置热重载**: 不重启服务即可更新配置
 - **动态日志**: 运行时切换日志级别
 - **Bearer 认证**: 标准 Token 认证
+- **Provider 白名单**: 仅启用指定 g4f provider，并按模型前缀过滤
 
 ### 1.3 技术栈
 | 组件 | 技术 | 版本 |
@@ -47,6 +49,7 @@
 │  │    OpenAI 路由组         │  │      Claude 路由组           │  │
 │  │  /v1/chat/completions   │  │  /v1/messages               │  │
 │  │  /v1/models             │  │  /v1/claude/models          │  │
+│  │  /v1/images             │  │                             │  │
 │  └──────────┬──────────────┘  └─────────────┬─────────────────┘  │
 │             │                               │                    │
 │             └───────────────┬───────────────┘                    │
@@ -79,7 +82,7 @@
 
 | 模块 | 职责 | 关键类/函数 |
 |------|------|-------------|
-| `routes/openai.py` | OpenAI 协议端点 | `chat_completions()`, `list_models()` |
+| `routes/openai.py` | OpenAI 协议端点 | `chat_completions()`, `list_models()`, `images()` |
 | `routes/claude.py` | Claude 协议端点 | `messages()`, `list_models()` |
 | `routes/admin.py` | 管理接口 | `update_cookies()`, `reload_config()` |
 | `providers/base.py` | Provider 抽象基类 | `BaseProvider` |
@@ -124,21 +127,24 @@ gemini:
   
 g4f:
   enabled: true
-  models:
-    - "gpt-4o"
-    - "gpt-4o-mini"
-    - "claude-3-opus"
-    - "claude-3-sonnet"
-    # 以下为示例占位，需按 g4f provider 当前支持的 model id 填写
-    - "deepseek-*"
-    - "qwen-*"
-    - "grok-*"
+  providers:
+    - "Qwen"
+    - "Kimi"
+    - "GLM"
+    - "Minimax"
+    - "Grok"
+  model_prefixes:
+    - "qwen-"
+    - "kimi-"
+    - "glm-"
+    - "minimax-"
+    - "grok-"
   fallback:
     enabled: true
     max_retries: 2
     timeout: 30
-  # 说明：g4f 的模型可用性依赖 provider 状态，部分模型可能需要 API Key 或 Cookies
-  # 建议：通过 g4f /v1/providers 查询可用 provider 与模型列表后再配置
+  # 说明：g4f 的模型可用性依赖 provider 状态，部分模型可能需要 API Key/Cookies/HAR
+  # 建议：通过 g4f /v1/providers/{id} 聚合模型列表后再过滤
 ```
 
 ### 3.2 热重载实现
@@ -385,6 +391,13 @@ class GeminiProvider(BaseProvider):
 
 ---
 
+### 6.4 Provider 白名单与模型聚合
+
+- g4f provider 仅启用 `g4f.providers` 白名单中的 provider。
+- 网关会从 g4f `/v1/providers/{id}` 聚合模型列表。
+- 对外 `/v1/models` 仅返回匹配 `g4f.model_prefixes` 的模型。
+- 如果聚合失败，保留上一次缓存列表并记录告警。
+
 ## 7. 流式响应设计
 
 ### 7.1 SSE (Server-Sent Events) 格式
@@ -584,6 +597,7 @@ services:
 |------|------|------|
 | `/v1/models` | GET | 列出可用模型 |
 | `/v1/chat/completions` | POST | 聊天完成（流式/非流式） |
+| `/v1/images` | POST | 图像生成 |
 
 ### 10.2 Claude 兼容端点
 

@@ -44,13 +44,25 @@ Authorization: Bearer <token>
       "owned_by": "openai"
     },
     {
-      "id": "deepseek-*",
+      "id": "qwen-*",
       "object": "model",
       "created": 1677610602,
       "owned_by": "g4f"
     },
     {
-      "id": "qwen-*",
+      "id": "kimi-*",
+      "object": "model",
+      "created": 1677610602,
+      "owned_by": "g4f"
+    },
+    {
+      "id": "glm-*",
+      "object": "model",
+      "created": 1677610602,
+      "owned_by": "g4f"
+    },
+    {
+      "id": "minimax-*",
       "object": "model",
       "created": 1677610602,
       "owned_by": "g4f"
@@ -65,8 +77,7 @@ Authorization: Bearer <token>
 }
 ```
 
-> 说明：模型列表来自当前配置与 provider 可用性。g4f 相关模型可能需要额外认证（API Key/Cookies）且会随 provider 状态变化。
-> 建议：通过 g4f `/v1/providers` 查询可用 provider 与模型列表后再配置。
+> 说明：模型列表来自当前配置与 provider 可用性。网关会从 g4f `/v1/providers/{id}` 聚合模型，并按 `g4f.providers`（白名单）与 `g4f.model_prefixes`（前缀规则）过滤后返回。g4f 相关模型可能需要额外认证（API Key/Cookies）且会随 provider 状态变化。
 
 ### 2.2 聊天完成
 
@@ -133,6 +144,66 @@ data: [DONE]
 | `stream` | boolean | 否 | 是否流式响应，默认 `false` |
 | `temperature` | float | 否 | 采样温度 (0-2)，Gemini 不支持 |
 | `max_tokens` | integer | 否 | 最大生成 token 数 |
+
+### 2.3 图片生成（OpenAI 兼容）
+
+**请求**:
+```http
+POST /v1/images
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "model": "gemini-2.5-pro",
+  "prompt": "A futuristic city at sunset",
+  "n": 1,
+  "size": "1024x1024",
+  "response_format": "b64_json"
+}
+```
+
+**响应（示例）**:
+```json
+{
+  "created": 1677652288,
+  "data": [
+    {
+      "b64_json": "iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ]
+}
+```
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `model` | string | 是 | 图像模型 ID（由模型白名单与前缀规则控制） |
+| `prompt` | string | 是 | 生成提示词 |
+| `n` | integer | 否 | 生成数量，默认 1 |
+| `size` | string | 否 | 图像尺寸（如 `512x512`, `1024x1024`） |
+| `response_format` | string | 否 | `url` 或 `b64_json`，默认 `b64_json` |
+| `user` | string | 否 | 透传字段，用于审计或限流 |
+
+**兼容性说明（差异）**:
+- 仅支持“生成”场景；编辑/变体类能力如需支持会另行扩展。
+- 部分 provider 可能忽略 `size` 或仅支持固定尺寸。
+- `response_format` 可能受 provider 能力限制，若不支持 `url` 将返回 `b64_json`。
+
+**字段映射与支持矩阵（OpenAI 兼容）**:
+
+| 字段 | OpenAI 语义 | 网关处理 | 说明 |
+|------|-------------|----------|------|
+| `model` | 图像模型 | 必填/校验 | 需匹配白名单与前缀规则 |
+| `prompt` | 生成提示词 | 必填/透传 | 空字符串将返回参数错误 |
+| `n` | 生成数量 | 可选/透传 | 若 provider 不支持多图，按 1 处理 |
+| `size` | 图像尺寸 | 可选/透传 | 可能被忽略或降级为固定尺寸 |
+| `response_format` | 返回格式 | 可选/透传 | 不支持 `url` 时降级为 `b64_json` |
+| `user` | 追踪字段 | 可选/透传 | 用于审计或限流，不影响生成 |
+
+**能力边界**:
+- 当前仅支持图像生成，不支持图像编辑/变体。
+- 不支持的能力返回 `image_not_supported` 错误。
 
 ---
 
@@ -234,6 +305,8 @@ data: {"type":"message_stop"}
 | `system` | string | 否 | 系统提示词 |
 | `max_tokens` | integer | 是 | 最大生成 token 数 |
 | `stream` | boolean | 否 | 是否流式响应 |
+
+> 说明：Claude 文本能力通过 g4f provider 提供；图像/多模态能力不保证支持。
 
 ---
 
@@ -377,6 +450,7 @@ Content-Type: application/json
 | `cookie_expired` | Cookie 已过期 |
 | `provider_error` | Provider 调用失败 |
 | `rate_limit` | 请求过于频繁 |
+| `image_not_supported` | 图像能力不可用或 provider 不支持 |
 
 ---
 

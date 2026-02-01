@@ -15,6 +15,7 @@
 - Docker 20.10+ / Docker Compose 2.0+
 - Python 3.11+（裸机部署）
 - Git（克隆代码）
+- Chrome/Chromium（仅当启用 g4f 浏览器类 provider 时需要）
 
 ## 2. 快速开始（Docker）
 
@@ -56,6 +57,28 @@ nano cookies/gemini.json
 
 ```bash
 docker-compose up -d
+```
+
+### 2.5 g4f 浏览器依赖与 HAR/Cookies（可选）
+
+当启用 g4f 的浏览器类 provider（需要网页自动化）时，建议：
+
+- 镜像内安装 Chrome/Chromium
+- 设置容器共享内存（`shm_size`）避免浏览器崩溃
+- 挂载 `har_and_cookies/` 与 `generated_media/` 目录（持久化登录状态与媒体）
+- 可选暴露 7900 端口用于手动登录获取 cookies/HAR
+
+示例（节选）：
+```yaml
+services:
+  gemini-gateway:
+    shm_size: "2gb"
+    ports:
+      - "8022:8022"
+      - "7900:7900"  # 可选：登录桌面
+    volumes:
+      - ./har_and_cookies:/app/har_and_cookies
+      - ./generated_media:/app/generated_media
 ```
 
 ### 2.5 验证部署

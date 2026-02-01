@@ -4,7 +4,7 @@
 生成完整的 Gemini-Gateway 项目开发文档，包括架构设计、API 规范、配置说明和部署指南
 
 ## Current Phase
-Phase 1: Requirements & Discovery
+Phase 6: Delivery
 
 ## Phases
 
@@ -31,7 +31,14 @@ Phase 1: Requirements & Discovery
 - [ ] 暂不执行
 - **Status:** pending
 
-### Phase 5: Delivery
+### Phase 5: Docs Update for Multimodal & Provider Controls
+- [x] 更新 API 规范（/v1/images + Claude 文本说明）
+- [x] 更新架构文档（多模态流 + provider 白名单 + 动态聚合）
+- [x] 更新部署文档（Chrome/Chromium + cookies/HAR + 7900 端口）
+- [x] 更新配置示例（provider 白名单 + 前缀过滤 + 目录挂载）
+- **Status:** complete
+
+### Phase 6: Delivery
 - [ ] 交付完整文档
 - **Status:** pending
 
@@ -55,7 +62,7 @@ Phase 1: Requirements & Discovery
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| 无 | - | - |
+| apply_patch context mismatch in docs/architecture.md | 1 | Re-edit with smaller, targeted patches |
 
 ## Notes
 - 文档生成阶段，暂不写代码

@@ -94,3 +94,13 @@
 
 ---
 *Generated: 2026-01-31*
+
+## 2026-02-01
+- Reviewed `docs/api-spec.md` and `docs/deployment.md` for update points.
+- `docs/api-spec.md` currently lacks `/v1/images` OpenAI-compatible section and does not note Claude text-only limitations.
+- `docs/deployment.md` currently lacks g4f browser/Chrome requirements, `har_and_cookies` and `generated_media` volume guidance, and optional 7900 login port.
+- Reviewed `docs/architecture.md` and `docs/config-examples.md`; they lack multimodal/image flow, provider whitelist + prefix filtering, and dynamic provider/model aggregation notes.
+- `docs/config-examples.md` currently includes a g4f model sync script; needs adaptation to provider whitelist + prefix filtering and g4f cookie/har directories.
+- Updated docs to include OpenAI-compatible /v1/images, Claude text-only note, provider whitelist/prefix filtering, and dynamic model aggregation via g4f providers.
+- Added Docker guidance for g4f browser dependencies, shm_size, har_and_cookies, generated_media, and optional 7900 login port.
+- Added /v1/images field mapping matrix and capability boundaries to docs/api-spec.md for OpenAI-compatible image requests.
