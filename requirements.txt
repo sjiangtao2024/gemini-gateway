@@ -1,0 +1,10 @@
+fastapi
+pydantic
+uvicorn
+pytest
+PyYAML
+httpx
+loguru
+watchdog
+gemini-webapi
+g4f
