@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI
 
 from app.auth.middleware import auth_middleware
@@ -37,5 +39,12 @@ if settings.g4f.enabled and settings.g4f.base_url:
         model_prefixes=settings.g4f.model_prefixes,
     )
 
+g4f_models: list[str] = []
+if g4f_provider is not None:
+    try:
+        g4f_models = [m["id"] for m in (asyncio.run(g4f_provider.list_models()) or [])]
+    except Exception:
+        g4f_models = []
+
 configure_openai(gemini_provider, g4f_provider, settings.gemini.models)
-configure_claude(settings.gemini.models, [])
+configure_claude(settings.gemini.models, g4f_models, g4f_provider)
