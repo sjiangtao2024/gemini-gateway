@@ -4,6 +4,8 @@
 
 **症状**: `/v1/models` 返回空列表或调用报 `provider_error`。
 
+**说明**: “需要 API key 的 provider”指调用官方/第三方 API 的渠道，必须提供对应服务的 API key。当前网关仅启用网页封装 provider，会排除这类 provider。
+
 **排查步骤**:
 1) 检查 `g4f.providers` 白名单是否正确（大小写需匹配，且仅选择无需 API Key 的网页封装 provider）。
 2) 访问 g4f `GET /v1/providers` 与 `GET /v1/providers/{id}` 确认 provider 在线。
