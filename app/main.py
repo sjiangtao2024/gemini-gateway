@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from app.auth.middleware import auth_middleware
+from app.middlewares.logging import RequestLoggingMiddleware
 from app.config.manager import ConfigManager
 from app.config.settings import Settings
 from app.providers.g4f import G4FProvider
@@ -21,6 +22,7 @@ from app.routes.openai import router as openai_router
 settings = Settings.from_env()
 
 app = FastAPI()
+app.add_middleware(RequestLoggingMiddleware)
 app.middleware("http")(auth_middleware)
 
 app.include_router(openai_router)
