@@ -76,7 +76,8 @@ docs/
     ├── 2026-02-08-phase3-multimodal.md
     ├── 2026-02-08-phase4-stability.md
     ├── 2026-02-08-phase5-hot-reload.md
-    └── 2026-02-09-cookie-restructure.md
+    ├── 2026-02-09-cookie-restructure.md
+    └── 2026-02-09-integrate-g4f-library.md
 ```
 
 ### 3. tests/ - 测试文件
