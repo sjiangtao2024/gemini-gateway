@@ -422,6 +422,123 @@ Content-Type: application/json
 
 **支持的日志级别**: `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
+### 4.6 上传 HAR 文件
+
+上传 HAR 抓包文件供 g4f 使用。
+
+**请求**:
+```http
+POST /admin/files/har
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+file: <HAR file>
+provider: openai  # 可选，用于命名文件
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "message": "HAR file uploaded successfully",
+  "data": {
+    "filename": "openai.har",
+    "path": "/app/har_and_cookies/har/openai.har",
+    "size": 12345
+  }
+}
+```
+
+### 4.7 上传 Cookie 文件
+
+上传 Cookie JSON 文件供 g4f 使用。
+
+**请求**:
+```http
+POST /admin/files/cookie
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+file: <JSON file>
+domain: kimi.com  # 可选，用于命名文件
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "message": "Cookie file uploaded successfully",
+  "data": {
+    "filename": "kimi.com.json",
+    "path": "/app/har_and_cookies/cookies/kimi.com.json",
+    "size": 5678
+  }
+}
+```
+
+### 4.8 列出文件
+
+列出所有 HAR 和 Cookie 文件。
+
+**请求**:
+```http
+GET /admin/files
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "har_files": ["openai.har", "google.har"],
+  "cookie_files": ["kimi.com.json", "qwen.com.json"],
+  "har_dir": "/app/har_and_cookies/har",
+  "cookies_dir": "/app/har_and_cookies/cookies",
+  "total_har": 2,
+  "total_cookies": 2
+}
+```
+
+### 4.9 获取文件信息
+
+获取指定文件的详细信息。
+
+**请求**:
+```http
+GET /admin/files/har/openai.har
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "filename": "openai.har",
+    "path": "/app/har_and_cookies/har/openai.har",
+    "size": 12345,
+    "modified": 1707123456.789
+  }
+}
+```
+
+### 4.10 删除文件
+
+删除指定的 HAR 或 Cookie 文件。
+
+**请求**:
+```http
+DELETE /admin/files/har/openai.har
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "message": "openai.har deleted successfully"
+}
+```
+
 ---
 
 ## 5. 错误响应
@@ -537,6 +654,47 @@ curl http://localhost:8022/v1/chat/completions \
     "stream": true
   }'
 ```
+
+---
+
+## 7. g4f Provider Cookie 管理
+
+g4f 支持多种 Provider，不同 Provider 需要不同的认证方式。
+
+### 7.1 Provider 认证方式对照表
+
+| Provider | 认证方式 | 所需文件 | 文件名示例 |
+|---------|---------|---------|-----------|
+| ChatGPT Web | HAR | `.har` 文件 | `openai.com.har` |
+| Kimi | Cookie | `.json` 文件 | `kimi.com.json` |
+| Qwen | Cookie | `.json` 文件 | `qwen.com.json` |
+| GLM | Cookie | `.json` 文件 | `chatglm.cn.json` |
+| Minimax | Cookie | `.json` 文件 | `minimax.chat.json` |
+
+### 7.2 Cookie 文件格式
+
+```json
+{
+  "session_token": "xxx",
+  "cf_clearance": "xxx",
+  "other_cookie": "value"
+}
+```
+
+### 7.3 HAR 文件获取方式
+
+1. 打开浏览器开发者工具 (F12)
+2. 切换到 Network 标签
+3. 登录目标网站并进行对话
+4. 右键请求 → Save all as HAR with content
+5. 上传到 `/admin/files/har`
+
+### 7.4 文件存储位置
+
+- HAR 文件: `/app/har_and_cookies/har/`
+- Cookie 文件: `/app/har_and_cookies/cookies/`
+
+**注意**: g4f 会自动在这些目录中查找匹配的文件。
 
 ---
 
