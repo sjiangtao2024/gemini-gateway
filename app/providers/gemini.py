@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from gemini_webapi import GeminiClient
+from gemini_webapi.constants import Model
 
 from app.providers.base import BaseProvider
 from app.utils.errors import classify_exception, AuthenticationError, AIGatewayError
@@ -70,6 +71,27 @@ class GeminiProvider(BaseProvider):
         return self._client
 
     @staticmethod
+    def _get_model_enum(model_name: str | None) -> Model:
+        """将模型名称字符串转换为 Model 枚举
+        
+        Args:
+            model_name: 模型名称，如 "gemini-3.0-pro", "gemini-auto"
+            
+        Returns:
+            Model 枚举值
+        """
+        if not model_name or model_name == "gemini-auto":
+            return Model.UNSPECIFIED
+        
+        model_map = {
+            "gemini-3.0-pro": Model.G_3_0_PRO,
+            "gemini-3.0-flash": Model.G_3_0_FLASH,
+            "gemini-3.0-flash-thinking": Model.G_3_0_FLASH_THINKING,
+        }
+        
+        return model_map.get(model_name, Model.UNSPECIFIED)
+
+    @staticmethod
     def _extract_text(content: Any) -> str:
         if isinstance(content, str):
             return content
@@ -95,12 +117,12 @@ class GeminiProvider(BaseProvider):
         try:
             client = await self._ensure_client()
             prompt = self._messages_to_prompt(messages)
-            selected_model = model or self.model
             
-            if selected_model:
-                response = await client.generate_content(prompt, model=selected_model)
-            else:
-                response = await client.generate_content(prompt)
+            # 获取模型枚举（将字符串转换为 Model）
+            selected_model_name = model or self.model
+            model_enum = self._get_model_enum(selected_model_name)
+            
+            response = await client.generate_content(prompt, model=model_enum)
             
             return {"text": response.text, "images": response.images, "raw": response}
         except AIGatewayError:
@@ -125,11 +147,11 @@ class GeminiProvider(BaseProvider):
             else:
                 prompt = text
             
-            selected_model = model or self.model
-            if selected_model:
-                response = await client.generate_content(prompt, files=files, model=selected_model)
-            else:
-                response = await client.generate_content(prompt, files=files)
+            # 获取模型枚举
+            selected_model_name = model or self.model
+            model_enum = self._get_model_enum(selected_model_name)
+            
+            response = await client.generate_content(prompt, files=files, model=model_enum)
             
             return {"text": response.text, "images": response.images, "raw": response}
         except AIGatewayError:
