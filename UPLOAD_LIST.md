@@ -178,11 +178,33 @@ vim data/gemini/cookies.json
 }
 ```
 
-**g4f HAR/Cookie**（可选，根据使用的 Provider）:
+**g4f HAR/Cookie**（ChatGPT、Kimi、Qwen 等）:
 ```bash
-# 上传 HAR 文件到 data/g4f/har/
-# 上传 Cookie JSON 到 data/g4f/cookies/
+# 方式 1：API 上传 HAR 文件（ChatGPT 需要）
+curl -X POST http://localhost:8022/admin/files/har \
+  -H "Authorization: Bearer your-token" \
+  -F "file=@chat.openai.com.har" \
+  -F "provider=openai"
+
+# 方式 2：API 上传 Cookie 文件（Kimi、Qwen 等）
+curl -X POST http://localhost:8022/admin/files/cookie \
+  -H "Authorization: Bearer your-token" \
+  -F "file=@kimi.com.json" \
+  -F "domain=kimi.com"
+
+# 方式 3：直接复制到目录（无需重启，g4f 自动读取）
+cp chat.openai.com.har ./data/g4f/har/
+cp kimi.com.json ./data/g4f/cookies/
 ```
+
+**支持的 Provider 和文件类型**：
+| Provider | 文件类型 | 文件名示例 |
+|---------|---------|-----------|
+| ChatGPT | HAR | `chat.openai.com.har` |
+| Kimi | Cookie JSON | `kimi.com.json` |
+| Qwen | Cookie JSON | `qwen.com.json` |
+| GLM | Cookie JSON | `chatglm.cn.json` |
+| Grok | Cookie JSON | `grok.com.json` |
 
 ### 3. 启动服务
 
@@ -211,7 +233,8 @@ gemini:
   cookie_path: "/app/data/gemini/cookies.json"  # ← 确认路径正确
 
 g4f:
-  enabled: false  # ← 根据需要启用
+  enabled: false        # ← 根据需要启用
+  cookies_dir: "/app/har_and_cookies"  # g4f 读取 cookie 的目录
 ```
 
 ---

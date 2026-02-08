@@ -108,25 +108,34 @@ ai-gateway/
 ## 🛠️ 管理接口
 
 ### Cookie 管理
+
+**Gemini Cookie**（支持自动刷新）
 ```bash
 # 更新 Gemini Cookie
 curl -X POST http://localhost:8022/admin/cookies \
   -H "Authorization: Bearer your-token" \
   -d '{"__Secure-1PSID": "...", "__Secure-1PSIDTS": "..."}'
+```
 
-# 上传 HAR 文件（g4f 使用）
+**g4f Cookie/HAR**（ChatGPT、Kimi、Qwen 等）
+```bash
+# 方式 1：API 上传 HAR 文件
 curl -X POST http://localhost:8022/admin/files/har \
   -H "Authorization: Bearer your-token" \
   -F "file=@chat.openai.com.har" \
   -F "provider=openai"
 
-# 上传 Cookie 文件（g4f 使用）
+# 方式 2：API 上传 Cookie 文件
 curl -X POST http://localhost:8022/admin/files/cookie \
   -H "Authorization: Bearer your-token" \
   -F "file=@kimi.com.json" \
   -F "domain=kimi.com"
 
-# 查看文件列表
+# 方式 3：直接放入目录（无需重启）
+cp chat.openai.com.har ./data/g4f/har/
+cp kimi.com.json ./data/g4f/cookies/
+
+# 查看已上传的文件
 curl http://localhost:8022/admin/files \
   -H "Authorization: Bearer your-token"
 ```
