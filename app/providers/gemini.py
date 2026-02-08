@@ -154,4 +154,24 @@ class GeminiProvider(BaseProvider):
             raise classify_exception(e, "gemini")
 
     async def list_models(self) -> list[dict]:
-        return []
+        """返回配置的 Gemini 模型列表"""
+        from gemini_webapi.constants import Model
+        
+        # 映射 OpenAI 风格的模型名到 Gemini 模型
+        model_mapping = {
+            "gemini-3.0-pro": Model.G_3_0_PRO,
+            "gemini-3.0-flash": Model.G_3_0_FLASH,
+            "gemini-3.0-flash-thinking": Model.G_3_0_FLASH_THINKING,
+            "gemini-1.5-pro": Model.UNSPECIFIED,  # 默认模型
+            "gemini-1.5-flash": Model.UNSPECIFIED,
+        }
+        
+        # 返回配置的模型
+        models = []
+        for model_name in self.models or ["gemini-1.5-pro"]:
+            models.append({
+                "id": model_name,
+                "object": "model",
+                "owned_by": "google"
+            })
+        return models
