@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 from app.providers.g4f import G4FProvider
 from app.providers.gemini import GeminiProvider
 from app.services.stream import sse_chat_chunks
+from app.utils.errors import AIGatewayError, http_exception_from_error, ProviderError
+from app.services.logger import logger
 
 router = APIRouter()
 
@@ -127,67 +129,82 @@ async def chat_completions(payload: ChatCompletionRequest):
     model = payload.model
     stream = payload.stream
     
-    if _is_gemini_model(model):
-        if _gemini is None:
-            raise HTTPException(status_code=503, detail="Gemini provider not configured")
-        
-        # 检查最后一条消息是否包含图片
-        last_message = payload.messages[-1] if payload.messages else None
-        has_image = (
-            last_message and 
-            isinstance(last_message.content, list) and
-            any(item.get("type") == "image_url" for item in last_message.content)
-        )
-        
-        if has_image:
-            # Vision 请求
-            text, image_files = _extract_image_from_content(last_message.content)
+    try:
+        if _is_gemini_model(model):
+            if _gemini is None:
+                raise ProviderError("gemini", "Provider not configured")
             
-            # 构建历史消息（不含最后一条）
-            prev_messages = [
-                {"role": m.role, "content": m.content if isinstance(m.content, str) else str(m.content)}
-                for m in payload.messages[:-1]
-            ]
-            
-            result = await _gemini.chat_completions_with_files(
-                messages=prev_messages,
-                text=text,
-                files=image_files,
-                model=model
+            # 检查最后一条消息是否包含图片
+            last_message = payload.messages[-1] if payload.messages else None
+            has_image = (
+                last_message and 
+                isinstance(last_message.content, list) and
+                any(item.get("type") == "image_url" for item in last_message.content)
             )
             
-            # 清理临时文件
-            for f in image_files:
-                try:
-                    Path(f).unlink()
-                except:
-                    pass
-        else:
-            # 普通文本请求
-            messages = [
-                {"role": m.role, "content": m.content if isinstance(m.content, str) else str(m.content)}
-                for m in payload.messages
-            ]
-            result = await _gemini.chat_completions(messages=messages, model=model)
+            if has_image:
+                # Vision 请求
+                text, image_files = _extract_image_from_content(last_message.content)
+                
+                # 构建历史消息（不含最后一条）
+                prev_messages = [
+                    {"role": m.role, "content": m.content if isinstance(m.content, str) else str(m.content)}
+                    for m in payload.messages[:-1]
+                ]
+                
+                result = await _gemini.chat_completions_with_files(
+                    messages=prev_messages,
+                    text=text,
+                    files=image_files,
+                    model=model
+                )
+                
+                # 清理临时文件
+                for f in image_files:
+                    try:
+                        Path(f).unlink()
+                    except:
+                        pass
+            else:
+                # 普通文本请求
+                messages = [
+                    {"role": m.role, "content": m.content if isinstance(m.content, str) else str(m.content)}
+                    for m in payload.messages
+                ]
+                result = await _gemini.chat_completions(messages=messages, model=model)
+            
+            return _create_openai_response(result.get("text", ""), model)
         
-        return _create_openai_response(result.get("text", ""), model)
-    
-    # g4f 处理 (暂不支持 Vision)
-    if _g4f is None:
-        raise HTTPException(status_code=503, detail="g4f provider not configured")
-    
-    # 转换为标准 OpenAI 格式
-    messages = []
-    for m in payload.messages:
-        if isinstance(m.content, str):
-            messages.append({"role": m.role, "content": m.content})
-        else:
-            # 多模态，g4f 可能不支持，提取文本部分
-            text_parts = [item.get("text", "") for item in m.content if item.get("type") == "text"]
-            messages.append({"role": m.role, "content": "\n".join(text_parts)})
-    
-    openai_payload = {"model": model, "messages": messages, "stream": stream}
-    return await _g4f.chat_completions(openai_payload)
+        # g4f 处理 (暂不支持 Vision)
+        if _g4f is None:
+            raise ProviderError("g4f", "Provider not configured")
+        
+        # 转换为标准 OpenAI 格式
+        messages = []
+        for m in payload.messages:
+            if isinstance(m.content, str):
+                messages.append({"role": m.role, "content": m.content})
+            else:
+                # 多模态，g4f 可能不支持，提取文本部分
+                text_parts = [item.get("text", "") for item in m.content if item.get("type") == "text"]
+                messages.append({"role": m.role, "content": "\n".join(text_parts)})
+        
+        openai_payload = {"model": model, "messages": messages, "stream": stream}
+        return await _g4f.chat_completions(openai_payload)
+        
+    except AIGatewayError as e:
+        raise http_exception_from_error(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error in chat_completions")
+        raise HTTPException(status_code=500, detail={
+            "error": {
+                "message": str(e),
+                "type": "internal_error",
+                "code": "internal_error"
+            }
+        })
 
 
 @router.post("/v1/images")

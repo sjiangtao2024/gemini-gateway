@@ -5,6 +5,8 @@ import uuid
 
 from app.providers.gemini import GeminiProvider
 from app.providers.g4f import G4FProvider
+from app.utils.errors import AIGatewayError, http_exception_from_error, ProviderError
+from app.services.logger import logger
 
 router = APIRouter()
 
@@ -109,30 +111,45 @@ async def list_models():
 @router.post("/v1/messages")
 async def messages(payload: ClaudeRequest):
     """Claude 协议消息完成 - 支持 Gemini 和 g4f"""
-    model = payload.model
-    
-    if _is_gemini_model(model):
-        if _gemini is None:
-            raise HTTPException(status_code=503, detail="Gemini provider not configured")
+    try:
+        model = payload.model
         
-        # 转换为 OpenAI 格式并调用
-        openai_messages = _claude_to_openai_messages(payload)
-        result = await _gemini.chat_completions(
-            messages=openai_messages,
-            model=model
-        )
+        if _is_gemini_model(model):
+            if _gemini is None:
+                raise ProviderError("gemini", "Provider not configured")
+            
+            # 转换为 OpenAI 格式并调用
+            openai_messages = _claude_to_openai_messages(payload)
+            result = await _gemini.chat_completions(
+                messages=openai_messages,
+                model=model
+            )
+            
+            return _openai_to_claude_response(result, model)
+        
+        # g4f 模型
+        if _g4f is None:
+            raise ProviderError("g4f", "Provider not configured")
+        
+        # g4f 可以直接接受 OpenAI 格式
+        openai_payload = {
+            "model": model,
+            "messages": _claude_to_openai_messages(payload)
+        }
+        result = await _g4f.chat_completions(openai_payload)
         
         return _openai_to_claude_response(result, model)
-    
-    # g4f 模型
-    if _g4f is None:
-        raise HTTPException(status_code=503, detail="g4f provider not configured")
-    
-    # g4f 可以直接接受 OpenAI 格式
-    openai_payload = {
-        "model": model,
-        "messages": _claude_to_openai_messages(payload)
-    }
-    result = await _g4f.chat_completions(openai_payload)
-    
-    return _openai_to_claude_response(result, model)
+        
+    except AIGatewayError as e:
+        raise http_exception_from_error(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error in messages")
+        raise HTTPException(status_code=500, detail={
+            "error": {
+                "message": str(e),
+                "type": "internal_error",
+                "code": "internal_error"
+            }
+        })
