@@ -11,6 +11,7 @@
 - **📊 动态日志**: 运行时切换日志级别 (DEBUG/INFO/ERROR)
 - **🔐 Bearer 认证**: 标准 Token 认证
 - **🍪 Cookie 管理**: API 接口更新，支持自动刷新
+- **📁 文件管理**: 支持 HAR/Cookie 文件上传，统一管理多 Provider
 - **🐳 Docker 部署**: 支持树莓派 5
 
 ## 🚀 快速开始
@@ -23,13 +24,17 @@ git clone https://github.com/yourusername/ai-gateway.git
 cd ai-gateway
 
 # 2. 准备配置
-mkdir -p config cookies logs
+mkdir -p config data/gemini data/g4f/{cookies,har,media} logs
 cp docs/config-examples.md config/config.yaml
 # 编辑 config.yaml，设置 bearer_token
 
 # 3. 准备 Cookie
-# 从浏览器获取 __Secure-1PSID 和 __Secure-1PSIDTS
-# 写入 cookies/gemini.json
+# Gemini: 从浏览器获取 __Secure-1PSID 和 __Secure-1PSIDTS
+# 写入 data/gemini/cookies.json
+# 
+# g4f: 将 HAR/Cookie 文件放入对应目录
+# - data/g4f/har/       (HAR 抓包文件)
+# - data/g4f/cookies/   (Cookie JSON 文件)
 
 # 4. 启动
 docker-compose up -d
@@ -78,14 +83,23 @@ ai-gateway/
 ├── app/                    # 应用代码
 │   ├── main.py            # FastAPI 入口
 │   ├── config/            # 配置管理
+│   ├── middlewares/       # 中间件
 │   ├── providers/         # 模型 Provider
 │   ├── routes/            # API 路由
 │   ├── services/          # 业务服务
 │   └── utils/             # 工具函数
 ├── config/                # 配置文件
 │   └── config.yaml
-├── cookies/               # Cookie 存储
+├── data/                  # 数据目录
+│   ├── gemini/            # Gemini Cookie
+│   │   └── cookies.json
+│   └── g4f/               # g4f 数据
+│       ├── cookies/       # Cookie JSON
+│       ├── har/           # HAR 文件
+│       └── media/         # 生成媒体
+├── logs/                  # 日志文件
 ├── docs/                  # 文档
+├── tests/                 # 测试
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -93,12 +107,32 @@ ai-gateway/
 
 ## 🛠️ 管理接口
 
+### Cookie 管理
 ```bash
-# 更新 Cookie
+# 更新 Gemini Cookie
 curl -X POST http://localhost:8022/admin/cookies \
   -H "Authorization: Bearer your-token" \
   -d '{"__Secure-1PSID": "...", "__Secure-1PSIDTS": "..."}'
 
+# 上传 HAR 文件（g4f 使用）
+curl -X POST http://localhost:8022/admin/files/har \
+  -H "Authorization: Bearer your-token" \
+  -F "file=@chat.openai.com.har" \
+  -F "provider=openai"
+
+# 上传 Cookie 文件（g4f 使用）
+curl -X POST http://localhost:8022/admin/files/cookie \
+  -H "Authorization: Bearer your-token" \
+  -F "file=@kimi.com.json" \
+  -F "domain=kimi.com"
+
+# 查看文件列表
+curl http://localhost:8022/admin/files \
+  -H "Authorization: Bearer your-token"
+```
+
+### 系统管理
+```bash
 # 切换日志级别
 curl -X POST http://localhost:8022/admin/logging \
   -H "Authorization: Bearer your-token" \
@@ -107,6 +141,9 @@ curl -X POST http://localhost:8022/admin/logging \
 # 重载配置
 curl -X POST http://localhost:8022/admin/config/reload \
   -H "Authorization: Bearer your-token"
+
+# 健康检查
+curl http://localhost:8022/health
 ```
 
 ## ✅ 验证步骤（开发）
