@@ -89,6 +89,31 @@ class GeminiProvider(BaseProvider):
             response = await client.generate_content(prompt)
         return {"text": response.text, "images": response.images, "raw": response}
 
+    async def chat_completions_with_files(
+        self,
+        messages: list[dict],
+        text: str,
+        files: list[str],
+        model: str | None = None
+    ) -> dict:
+        """支持文件上传的聊天完成"""
+        client = await self._ensure_client()
+        
+        # 构建提示词（包含历史消息上下文）
+        context = self._messages_to_prompt(messages)
+        if context:
+            prompt = f"{context}\n\n{text}"
+        else:
+            prompt = text
+        
+        selected_model = model or self.model
+        if selected_model:
+            response = await client.generate_content(prompt, files=files, model=selected_model)
+        else:
+            response = await client.generate_content(prompt, files=files)
+        
+        return {"text": response.text, "images": response.images, "raw": response}
+
     async def generate_images(self, prompt: str, model: str | None = None) -> list[Any]:
         client = await self._ensure_client()
         selected_model = model or self.model
