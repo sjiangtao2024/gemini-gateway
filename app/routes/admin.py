@@ -7,9 +7,9 @@ from pydantic import BaseModel
 
 from app.config.manager import ConfigManager
 from app.providers.gemini import GeminiProvider
+from app.services.logger import LogLevel, log_manager
 
 router = APIRouter()
-
 _config_manager: ConfigManager | None = None
 _gemini: GeminiProvider | None = None
 
@@ -24,6 +24,10 @@ class CookieStatus(BaseModel):
     has_psidts: bool
     updated_at: str | None
     auto_refresh: bool
+
+
+class LogLevelUpdate(BaseModel):
+    level: LogLevel
 
 
 def configure(manager: ConfigManager | None, gemini: GeminiProvider | None = None) -> None:
@@ -109,3 +113,14 @@ async def cookie_status():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read cookie status: {e}")
+
+
+@router.post("/admin/logging")
+async def set_log_level(payload: LogLevelUpdate):
+    """切换日志级别 (DEBUG/INFO/WARNING/ERROR)"""
+    previous = log_manager.set_level(payload.level)
+    return {
+        "status": "success",
+        "level": payload.level,
+        "previous_level": previous
+    }
