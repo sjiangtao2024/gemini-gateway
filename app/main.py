@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.auth.middleware import auth_middleware
 from app.middlewares.logging import RequestLoggingMiddleware
@@ -51,6 +53,14 @@ else:
 app = FastAPI()
 app.add_middleware(RequestLoggingMiddleware)
 app.middleware("http")(auth_middleware)
+
+# 挂载静态文件目录
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# 根路径返回 admin.html
+@app.get("/")
+async def root():
+    return FileResponse("app/static/admin.html")
 
 app.include_router(openai_router)
 app.include_router(claude_router)

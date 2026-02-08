@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Gateway 管理面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background 0.2s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .file-input {
+            margin-bottom: 15px;
+        }
+        .file-input input[type="file"] {
+            padding: 10px;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+        }
+        .status {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        .info-box p {
+            margin: 5px 0;
+            color: #555;
+            font-size: 14px;
+        }
+        .token-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .file-list {
+            margin-top: 20px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .file-name {
+            font-family: monospace;
+            color: #333;
+        }
+        .file-size {
+            color: #666;
+            font-size: 12px;
+        }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: #666;
+        }
+        .tab.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 AI-Gateway 管理面板</h1>
+
+        <!-- Token 认证 -->
+        <div class="section">
+            <h2>🔐 认证</h2>
+            <div class="token-section">
+                <div class="form-group">
+                    <label for="bearer-token">Bearer Token</label>
+                    <input type="password" id="bearer-token" placeholder="输入你的 Bearer Token">
+                </div>
+                <button class="btn btn-secondary" onclick="saveToken()">保存 Token</button>
+                <span style="color: #666; font-size: 12px; margin-left: 10px;">Token 仅保存在浏览器本地存储中</span>
+            </div>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('gemini')">Gemini Cookie</div>
+            <div class="tab" onclick="switchTab('g4f')">g4f HAR 文件</div>
+            <div class="tab" onclick="switchTab('logs')">系统日志</div>
+        </div>
+
+        <!-- Gemini Cookie 管理 -->
+        <div id="gemini-tab" class="tab-content active">
+            <div class="section">
+                <h2>🤖 Gemini Cookie 管理</h2>
+                <div class="info-box">
+                    <p><strong>说明：</strong>在此处编辑 Gemini 的 Cookie 信息。</p>
+                    <p>需要从浏览器开发者工具 (F12 → Application → Cookies) 获取 <code>__Secure-1PSID</code> 和 <code>__Secure-1PSIDTS</code>。</p>
+                    <p>修改后点击"保存"，服务会自动重新加载。</p>
+                </div>
+                <div class="form-group">
+                    <label for="gemini-cookie">cookies.json 内容</label>
+                    <textarea id="gemini-cookie" placeholder='{
+  "__Secure-1PSID": "你的PSID值",
+  "__Secure-1PSIDTS": "你的PSIDTS值"
+}'></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="loadGeminiCookie()">📂 加载当前 Cookie</button>
+                <button class="btn btn-success" onclick="saveGeminiCookie()">💾 保存 Cookie</button>
+                <div id="gemini-status" class="status"></div>
+            </div>
+        </div>
+
+        <!-- g4f HAR 文件管理 -->
+        <div id="g4f-tab" class="tab-content">
+            <div class="section">
+                <h2>📁 g4f HAR 文件上传</h2>
+                <div class="info-box">
+                    <p><strong>说明：</strong>上传 HAR 文件用于 ChatGPT 等 Provider 的认证。</p>
+                    <p>从浏览器开发者工具 (F12 → Network → 右键 → Save all as HAR) 导出。</p>
+                    <p>文件名建议：<code>chat.openai.com.har</code></p>
+                </div>
+                <div class="file-input">
+                    <label>选择 HAR 文件</label>
+                    <input type="file" id="har-file" accept=".har">
+                </div>
+                <div class="form-group">
+                    <label for="har-provider">Provider 标识（可选）</label>
+                    <input type="text" id="har-provider" placeholder="例如: openai, chatgpt">
+                </div>
+                <button class="btn btn-success" onclick="uploadHarFile()">📤 上传 HAR 文件</button>
+                <div id="har-status" class="status"></div>
+
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">已上传的文件</h3>
+                <div id="file-list" class="file-list">
+                    <p style="color: #999;">加载中...</p>
+                </div>
+                <button class="btn btn-secondary" onclick="loadFileList()" style="margin-top: 15px;">🔄 刷新列表</button>
+            </div>
+
+            <div class="section">
+                <h2>🍪 g4f Cookie 文件上传</h2>
+                <div class="info-box">
+                    <p><strong>说明：</strong>上传 JSON 格式的 Cookie 文件。</p>
+                    <p>用于 Kimi、Qwen 等需要 Cookie 认证的 Provider。</p>
+                </div>
+                <div class="file-input">
+                    <label>选择 Cookie JSON 文件</label>
+                    <input type="file" id="cookie-file" accept=".json">
+                </div>
+                <div class="form-group">
+                    <label for="cookie-domain">域名标识（可选）</label>
+                    <input type="text" id="cookie-domain" placeholder="例如: kimi.com, qwen.com">
+                </div>
+                <button class="btn btn-success" onclick="uploadCookieFile()">📤 上传 Cookie 文件</button>
+                <div id="cookie-status" class="status"></div>
+            </div>
+        </div>
+
+        <!-- 系统日志 -->
+        <div id="logs-tab" class="tab-content">
+            <div class="section">
+                <h2>📋 系统状态</h2>
+                <button class="btn btn-primary" onclick="checkHealth()">检查健康状态</button>
+                <div id="health-result" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时恢复 token
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedToken = localStorage.getItem('bearerToken');
+            if (savedToken) {
+                document.getElementById('bearer-token').value = savedToken;
+            }
+            loadFileList();
+        });
+
+        // 保存 Token
+        function saveToken() {
+            const token = document.getElementById('bearer-token').value;
+            localStorage.setItem('bearerToken', token);
+            showStatus('token-status', 'Token 已保存', 'success');
+        }
+
+        // 切换标签页
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // 获取请求头
+        function getHeaders() {
+            const token = localStorage.getItem('bearerToken') || '';
+            return {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        // 显示状态消息
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = 'status ' + type;
+            setTimeout(() => {
+                el.className = 'status';
+            }, 5000);
+        }
+
+        // 加载 Gemini Cookie
+        async function loadGeminiCookie() {
+            try {
+                const response = await fetch('/admin/cookies/status', {
+                    headers: getHeaders()
+                });
+                
+                if (!response.ok) {
+                    throw new Error('获取失败: ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                // 构建 JSON 内容
+                const cookieContent = {
+                    "__Secure-1PSID": data.has_psid ? "已设置 (请重新输入查看)" : "",
+                    "__Secure-1PSIDTS": data.has_psidts ? "已设置 (请重新输入查看)" : "",
+                    "updated_at": data.updated_at || new Date().toISOString()
+                };
+                
+                document.getElementById('gemini-cookie').value = JSON.stringify(cookieContent, null, 2);
+                showStatus('gemini-status', '已加载当前状态，请编辑后保存', 'success');
+            } catch (error) {
+                showStatus('gemini-status', '加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 保存 Gemini Cookie
+        async function saveGeminiCookie() {
+            try {
+                const content = document.getElementById('gemini-cookie').value;
+                const data = JSON.parse(content);
+                
+                const response = await fetch('/admin/cookies', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        "__Secure_1PSID": data["__Secure-1PSID"],
+                        "__Secure_1PSIDTS": data["__Secure-1PSIDTS"]
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('保存失败: ' + response.status);
+                }
+                
+                showStatus('gemini-status', 'Cookie 保存成功！服务已重新加载。', 'success');
+            } catch (error) {
+                showStatus('gemini-status', '保存失败: ' + error.message, 'error');
+            }
+        }
+
+        // 上传 HAR 文件
+        async function uploadHarFile() {
+            const fileInput = document.getElementById('har-file');
+            const provider = document.getElementById('har-provider').value;
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showStatus('har-status', '请选择文件', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            if (provider) {
+                formData.append('provider', provider);
+            }
+            
+            try {
+                const response = await fetch('/admin/files/har', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + (localStorage.getItem('bearerToken') || '')
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('上传失败: ' + response.status);
+                }
+                
+                showStatus('har-status', 'HAR 文件上传成功！', 'success');
+                fileInput.value = '';
+                loadFileList();
+            } catch (error) {
+                showStatus('har-status', '上传失败: ' + error.message, 'error');
+            }
+        }
+
+        // 上传 Cookie 文件
+        async function uploadCookieFile() {
+            const fileInput = document.getElementById('cookie-file');
+            const domain = document.getElementById('cookie-domain').value;
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showStatus('cookie-status', '请选择文件', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            if (domain) {
+                formData.append('domain', domain);
+            }
+            
+            try {
+                const response = await fetch('/admin/files/cookie', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + (localStorage.getItem('bearerToken') || '')
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('上传失败: ' + response.status);
+                }
+                
+                showStatus('cookie-status', 'Cookie 文件上传成功！', 'success');
+                fileInput.value = '';
+                loadFileList();
+            } catch (error) {
+                showStatus('cookie-status', '上传失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载文件列表
+        async function loadFileList() {
+            try {
+                const response = await fetch('/admin/files', {
+                    headers: getHeaders()
+                });
+                
+                if (!response.ok) {
+                    throw new Error('获取失败');
+                }
+                
+                const data = await response.json();
+                const listEl = document.getElementById('file-list');
+                
+                let html = '';
+                
+                if (data.har_files && data.har_files.length > 0) {
+                    html += '<h4>HAR 文件</h4>';
+                    data.har_files.forEach(file => {
+                        html += `<div class="file-item">
+                            <span class="file-name">${file}</span>
+                            <button class="delete-btn" onclick="deleteFile('har', '${file}')">删除</button>
+                        </div>`;
+                    });
+                }
+                
+                if (data.cookie_files && data.cookie_files.length > 0) {
+                    html += '<h4 style="margin-top: 20px;">Cookie 文件</h4>';
+                    data.cookie_files.forEach(file => {
+                        html += `<div class="file-item">
+                            <span class="file-name">${file}</span>
+                            <button class="delete-btn" onclick="deleteFile('cookie', '${file}')">删除</button>
+                        </div>`;
+                    });
+                }
+                
+                if (!html) {
+                    html = '<p style="color: #999;">暂无文件</p>';
+                }
+                
+                listEl.innerHTML = html;
+            } catch (error) {
+                document.getElementById('file-list').innerHTML = 
+                    '<p style="color: #dc3545;">加载失败: ' + error.message + '</p>';
+            }
+        }
+
+        // 删除文件
+        async function deleteFile(type, filename) {
+            if (!confirm('确定要删除 ' + filename + ' 吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/files/${type}/${filename}`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                });
+                
+                if (!response.ok) {
+                    throw new Error('删除失败');
+                }
+                
+                loadFileList();
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // 检查健康状态
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                const el = document.getElementById('health-result');
+                el.innerHTML = `<pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow: auto;">${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('health-result').innerHTML = 
+                    '<p style="color: #dc3545;">检查失败: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>
