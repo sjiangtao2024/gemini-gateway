@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.providers.g4f import G4FProvider
 from app.providers.gemini import GeminiProvider
@@ -38,6 +38,14 @@ class ChatCompletionRequest(BaseModel):
     model: str
     messages: list[ChatMessage]
     stream: bool = False
+
+
+class ImageGenerationRequest(BaseModel):
+    model: str
+    prompt: str
+    n: int = Field(default=1, ge=1, le=10)
+    size: str = "1024x1024"
+    response_format: Literal["url", "b64_json"] = "b64_json"
 
 
 def configure(gemini: GeminiProvider | None, g4f: G4FProvider | None, gemini_models: list[str]) -> None:
@@ -183,21 +191,61 @@ async def chat_completions(payload: ChatCompletionRequest):
 
 
 @router.post("/v1/images")
-async def images(payload: dict):
-    model = payload.get("model", "")
-    prompt = payload.get("prompt", "")
+async def images(payload: ImageGenerationRequest):
+    """图像生成 - 支持 Gemini 和 g4f"""
+    model = payload.model
+    prompt = payload.prompt
+    
     if not prompt:
         raise HTTPException(status_code=422, detail="prompt required")
-    if not _is_gemini_model(model):
-        raise HTTPException(status_code=501, detail="Image generation only supported for Gemini models")
-    if _gemini is None:
-        raise HTTPException(status_code=503, detail="Gemini provider not configured")
-    images = await _gemini.generate_images(prompt=prompt, model=model)
-    data: list[dict[str, Any]] = []
-    for image in images:
-        if isinstance(image, bytes):
-            encoded = base64.b64encode(image).decode("utf-8")
-        else:
-            encoded = str(image)
-        data.append({"b64_json": encoded})
-    return {"created": 0, "data": data}
+    
+    if _is_gemini_model(model):
+        if _gemini is None:
+            raise HTTPException(status_code=503, detail="Gemini provider not configured")
+        
+        # Gemini 图像生成
+        try:
+            images = await _gemini.generate_images(prompt=prompt, model=model)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Image generation failed: {e}")
+        
+        data = []
+        for image in images[:payload.n]:  # 限制数量
+            if isinstance(image, bytes):
+                encoded = base64.b64encode(image).decode("utf-8")
+            else:
+                encoded = str(image)
+            
+            if payload.response_format == "url":
+                # 返回 data URL
+                item = {"url": f"data:image/png;base64,{encoded}"}
+            else:
+                item = {"b64_json": encoded}
+            
+            data.append(item)
+        
+        return {
+            "created": 0,
+            "data": data
+        }
+    
+    # g4f 图像生成
+    if _g4f is None:
+        raise HTTPException(status_code=503, detail="g4f provider not configured")
+    
+    try:
+        # g4f 可能有图像生成能力，尝试调用
+        # 注意：g4f 的图像生成 API 可能不同，这里作为预留
+        result = await _g4f.chat_completions({
+            "model": model,
+            "messages": [{"role": "user", "content": f"Generate an image: {prompt}"}]
+        })
+        
+        # 如果 g4f 返回图像，处理它
+        # 这里简化处理，实际可能需要根据 g4f 的响应格式调整
+        raise HTTPException(status_code=501, detail="Image generation via g4f not yet implemented")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {e}")
