@@ -32,7 +32,6 @@ class GeminiSettings(BaseModel):
 
 class G4FSettings(BaseModel):
     enabled: bool = False
-    base_url: str = "http://localhost:1337"
     providers: List[str] = Field(default_factory=list)
     model_prefixes: List[str] = Field(default_factory=list)
     timeout: float = 30.0  # 超时时间（秒）
@@ -51,7 +50,6 @@ class Settings(BaseModel):
         port = int(os.getenv("SERVER_PORT", "8022"))
         bearer_token = os.getenv("BEARER_TOKEN", "")
         cookie_path = os.getenv("COOKIE_PATH", "")
-        g4f_base_url = os.getenv("G4F_BASE_URL", "http://localhost:1337")
         providers = [p for p in os.getenv("G4F_PROVIDERS", "").split(",") if p]
         prefixes = [p for p in os.getenv("G4F_MODEL_PREFIXES", "").split(",") if p]
         g4f_enabled = os.getenv("G4F_ENABLED", "false").lower() in {"1", "true", "yes"}
@@ -66,7 +64,6 @@ class Settings(BaseModel):
             ),
             g4f=G4FSettings(
                 enabled=g4f_enabled,
-                base_url=g4f_base_url,
                 providers=providers,
                 model_prefixes=prefixes,
                 timeout=float(os.getenv("G4F_TIMEOUT", "30.0"))

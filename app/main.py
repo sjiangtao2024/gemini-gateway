@@ -69,9 +69,8 @@ if settings.gemini.enabled and settings.gemini.cookie_path:
     )
 
 g4f_provider = None
-if settings.g4f.enabled and settings.g4f.base_url:
+if settings.g4f.enabled:
     g4f_provider = G4FProvider(
-        base_url=settings.g4f.base_url,
         providers=settings.g4f.providers,
         model_prefixes=settings.g4f.model_prefixes,
         timeout=settings.g4f.timeout,
