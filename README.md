@@ -6,7 +6,7 @@
 
 - **🤖 多模型支持**: Gemini 2.5/3.0 (主力) + ChatGPT/Claude (备选，通过 gpt4free)
 - **🔄 双协议兼容**: OpenAI (`/v1/chat/completions`) + Claude (`/v1/messages`)
-- **🎨 图像生成**: 支持 Gemini 和 g4f (Bing Image Creator 等)
+- **🎨 图像生成**: 支持 Gemini 和 ChatGPT (g4f)
 - **🔧 配置热重载**: 修改配置无需重启服务
 - **📊 动态日志**: 运行时切换日志级别 (DEBUG/INFO/ERROR)
 - **🔐 Bearer 认证**: 标准 Token 认证

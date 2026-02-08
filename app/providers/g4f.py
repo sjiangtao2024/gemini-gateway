@@ -133,56 +133,52 @@ class G4FProvider(BaseProvider):
             raise
     
     async def generate_images(self, prompt: str, model: str | None = None, n: int = 1) -> list[dict]:
-        """使用 g4f 生成图像
+        """使用 ChatGPT (g4f) 生成图像
+        
+        注意: ChatGPT 的图像生成是通过聊天界面触发的，
+        我们发送特定的图像生成请求，然后解析返回的图像链接。
         
         Args:
             prompt: 图像生成提示词
-            model: 图像模型名称（如 'flux', 'dall-e-3'）
+            model: 图像模型名称（默认使用 ChatGPT 的 gpt-image）
             n: 生成图像数量
             
         Returns:
-            图像数据列表，每个元素包含 url 或 b64_json
+            图像数据列表，每个元素包含 url
         """
         try:
-            # 获取图像 provider
-            image_provider = self._get_image_provider(model)
-            
             images = []
+            
             for _ in range(n):
-                # 使用 g4f 的异步图像生成
-                response = await self._client.images.async_generate(
-                    prompt=prompt,
-                    model=model,
-                    provider=image_provider,
+                # 使用 ChatGPT 生成图像
+                # 发送图像生成请求
+                response = await self._client.chat.completions.create(
+                    model="gpt-4o",  # 使用支持图像的模型
+                    messages=[
+                        {"role": "user", "content": f"Generate an image: {prompt}"}
+                    ],
+                    provider=g4f.Provider.OpenaiChat,
                 )
                 
-                # 处理响应
-                for image_data in response.data:
-                    if hasattr(image_data, 'url') and image_data.url:
-                        images.append({"url": image_data.url})
-                    elif hasattr(image_data, 'b64_json') and image_data.b64_json:
-                        images.append({"b64_json": image_data.b64_json})
-                    else:
-                        # 尝试获取 base64 数据
-                        images.append({"b64_json": str(image_data)})
+                # 从响应中提取图像 URL
+                # ChatGPT 通常会在回复中包含图像链接
+                content = ""
+                if hasattr(response, 'choices') and response.choices:
+                    content = response.choices[0].message.content
+                
+                # 尝试从内容中提取图像 URL
+                import re
+                url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp)'
+                urls = re.findall(url_pattern, content, re.IGNORECASE)
+                
+                if urls:
+                    images.append({"url": urls[0]})
+                else:
+                    # 如果没有找到 URL，返回空内容提示
+                    logger.warning(f"No image URL found in ChatGPT response: {content[:100]}")
+                    images.append({"url": "", "error": "No image generated"})
             
             return images[:n]
         except Exception as e:
-            logger.error(f"g4f generate_images error: {e}")
+            logger.error(f"ChatGPT image generation error: {e}")
             raise
-    
-    def _get_image_provider(self, model: str | None) -> Any | None:
-        """根据模型名获取图像生成 Provider"""
-        if not model:
-            return g4f.Provider.BingCreateImages  # 默认使用 Bing
-        
-        model_lower = model.lower()
-        
-        # 根据模型名选择 provider
-        if 'bing' in model_lower or 'dall' in model_lower:
-            return g4f.Provider.BingCreateImages
-        elif 'pollinations' in model_lower:
-            return g4f.Provider.PollinationsImage
-        
-        # 默认使用 Bing Create Images
-        return g4f.Provider.BingCreateImages
