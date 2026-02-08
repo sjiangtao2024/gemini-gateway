@@ -57,5 +57,5 @@ if g4f_provider is not None:
         g4f_models = []
 
 configure_openai(gemini_provider, g4f_provider, settings.gemini.models)
-configure_claude(settings.gemini.models, g4f_models, g4f_provider)
+configure_claude(settings.gemini.models, g4f_models, gemini_provider, g4f_provider)
 configure_admin(config_manager, gemini_provider, g4f_provider)
