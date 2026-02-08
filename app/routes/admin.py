@@ -2,18 +2,20 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 
 from app.config.manager import ConfigManager
 from app.providers.g4f import G4FProvider
 from app.providers.gemini import GeminiProvider
 from app.services.logger import LogLevel, log_manager
+from app.services.file_manager import FileManager
 
 router = APIRouter()
 _config_manager: ConfigManager | None = None
 _gemini: GeminiProvider | None = None
 _g4f: G4FProvider | None = None
+_file_manager: FileManager | None = None
 
 
 class CookieUpdate(BaseModel):
@@ -32,11 +34,17 @@ class LogLevelUpdate(BaseModel):
     level: LogLevel
 
 
-def configure(manager: ConfigManager | None, gemini: GeminiProvider | None = None, g4f: G4FProvider | None = None) -> None:
-    global _config_manager, _gemini, _g4f
+def configure(
+    manager: ConfigManager | None,
+    gemini: GeminiProvider | None = None,
+    g4f: G4FProvider | None = None,
+    file_manager: FileManager | None = None
+) -> None:
+    global _config_manager, _gemini, _g4f, _file_manager
     _config_manager = manager
     _gemini = gemini
     _g4f = g4f
+    _file_manager = file_manager
 
 
 @router.get("/health")
@@ -160,3 +168,103 @@ async def set_log_level(payload: LogLevelUpdate):
         "level": payload.level,
         "previous_level": previous
     }
+
+
+@router.post("/admin/files/har")
+async def upload_har(
+    file: UploadFile = File(...),
+    provider: str | None = Form(None)
+):
+    """上传 HAR 文件
+    
+    provider: 可选，如 'openai', 'google' 等，用于命名文件
+    """
+    if _file_manager is None:
+        raise HTTPException(status_code=503, detail="File manager not configured")
+    
+    try:
+        result = await _file_manager.save_har(file, provider)
+        return {
+            "status": "success",
+            "message": "HAR file uploaded successfully",
+            "data": result
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save HAR: {e}")
+
+
+@router.post("/admin/files/cookie")
+async def upload_cookie(
+    file: UploadFile = File(...),
+    domain: str | None = Form(None)
+):
+    """上传 Cookie JSON 文件
+    
+    domain: 可选，如 'kimi.com', 'qwen.com' 等，用于命名文件
+    """
+    if _file_manager is None:
+        raise HTTPException(status_code=503, detail="File manager not configured")
+    
+    try:
+        result = await _file_manager.save_cookie(file, domain)
+        return {
+            "status": "success",
+            "message": "Cookie file uploaded successfully",
+            "data": result
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save cookie: {e}")
+
+
+@router.get("/admin/files")
+async def list_files():
+    """列出所有 HAR 和 Cookie 文件"""
+    if _file_manager is None:
+        raise HTTPException(status_code=503, detail="File manager not configured")
+    
+    return _file_manager.list_files()
+
+
+@router.get("/admin/files/{file_type}/{filename}")
+async def get_file_info(file_type: str, filename: str):
+    """获取文件信息"""
+    if _file_manager is None:
+        raise HTTPException(status_code=503, detail="File manager not configured")
+    
+    if file_type not in ["har", "cookie"]:
+        raise HTTPException(status_code=400, detail="file_type must be 'har' or 'cookie'")
+    
+    info = _file_manager.get_file_info(file_type, filename)
+    if info:
+        return {
+            "status": "success",
+            "data": info
+        }
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
+
+
+@router.delete("/admin/files/{file_type}/{filename}")
+async def delete_file(file_type: str, filename: str):
+    """删除文件
+    
+    file_type: 'har' 或 'cookie'
+    """
+    if _file_manager is None:
+        raise HTTPException(status_code=503, detail="File manager not configured")
+    
+    if file_type not in ["har", "cookie"]:
+        raise HTTPException(status_code=400, detail="file_type must be 'har' or 'cookie'")
+    
+    success = _file_manager.delete_file(file_type, filename)
+    if success:
+        return {
+            "status": "success",
+            "message": f"{filename} deleted successfully"
+        }
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
