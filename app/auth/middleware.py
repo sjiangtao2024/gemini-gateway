@@ -17,9 +17,12 @@ async def auth_middleware(request: Request, call_next):
     if request.url.path.startswith("/static/") or request.url.path in public_paths:
         return await call_next(request)
     
-    # 如果没有配置 API Key，跳过认证（开发模式）
+    # API Key 是必需的
     if not _api_key:
-        return await call_next(request)
+        return JSONResponse(
+            {"error": {"message": "API key not configured on server", "code": "server_config_error"}},
+            status_code=500,
+        )
     
     # 尝试多种方式获取 API Key
     provided_key = None
