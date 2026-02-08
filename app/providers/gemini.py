@@ -5,6 +5,7 @@ from typing import Any, Iterable
 from gemini_webapi import GeminiClient
 
 from app.providers.base import BaseProvider
+from app.utils.errors import classify_exception, AuthenticationError, AIGatewayError
 
 
 class GeminiProvider(BaseProvider):
@@ -45,16 +46,27 @@ class GeminiProvider(BaseProvider):
 
     async def _ensure_client(self) -> GeminiClient:
         if self._client is None:
-            psid, psidts = self.load_cookie_values(self.cookie_path)
+            try:
+                psid, psidts = self.load_cookie_values(self.cookie_path)
+            except ValueError as e:
+                raise AuthenticationError(f"Invalid cookie: {e}")
+            except FileNotFoundError:
+                raise AuthenticationError("Cookie file not found")
+            
             self._client = GeminiClient(psid, psidts, proxy=self.proxy)
+        
         if not self._initialized:
-            await self._client.init(
-                timeout=self.timeout,
-                auto_close=self.auto_close,
-                close_delay=self.close_delay,
-                auto_refresh=self.auto_refresh,
-            )
-            self._initialized = True
+            try:
+                await self._client.init(
+                    timeout=self.timeout,
+                    auto_close=self.auto_close,
+                    close_delay=self.close_delay,
+                    auto_refresh=self.auto_refresh,
+                )
+                self._initialized = True
+            except Exception as e:
+                raise classify_exception(e, "gemini")
+        
         return self._client
 
     @staticmethod
@@ -80,14 +92,21 @@ class GeminiProvider(BaseProvider):
         return "\n".join(lines)
 
     async def chat_completions(self, messages: list[dict], model: str | None = None, **kwargs) -> dict:
-        client = await self._ensure_client()
-        prompt = self._messages_to_prompt(messages)
-        selected_model = model or self.model
-        if selected_model:
-            response = await client.generate_content(prompt, model=selected_model)
-        else:
-            response = await client.generate_content(prompt)
-        return {"text": response.text, "images": response.images, "raw": response}
+        try:
+            client = await self._ensure_client()
+            prompt = self._messages_to_prompt(messages)
+            selected_model = model or self.model
+            
+            if selected_model:
+                response = await client.generate_content(prompt, model=selected_model)
+            else:
+                response = await client.generate_content(prompt)
+            
+            return {"text": response.text, "images": response.images, "raw": response}
+        except AIGatewayError:
+            raise
+        except Exception as e:
+            raise classify_exception(e, "gemini")
 
     async def chat_completions_with_files(
         self,
@@ -96,32 +115,43 @@ class GeminiProvider(BaseProvider):
         files: list[str],
         model: str | None = None
     ) -> dict:
-        """支持文件上传的聊天完成"""
-        client = await self._ensure_client()
-        
-        # 构建提示词（包含历史消息上下文）
-        context = self._messages_to_prompt(messages)
-        if context:
-            prompt = f"{context}\n\n{text}"
-        else:
-            prompt = text
-        
-        selected_model = model or self.model
-        if selected_model:
-            response = await client.generate_content(prompt, files=files, model=selected_model)
-        else:
-            response = await client.generate_content(prompt, files=files)
-        
-        return {"text": response.text, "images": response.images, "raw": response}
+        try:
+            client = await self._ensure_client()
+            
+            # 构建提示词（包含历史消息上下文）
+            context = self._messages_to_prompt(messages)
+            if context:
+                prompt = f"{context}\n\n{text}"
+            else:
+                prompt = text
+            
+            selected_model = model or self.model
+            if selected_model:
+                response = await client.generate_content(prompt, files=files, model=selected_model)
+            else:
+                response = await client.generate_content(prompt, files=files)
+            
+            return {"text": response.text, "images": response.images, "raw": response}
+        except AIGatewayError:
+            raise
+        except Exception as e:
+            raise classify_exception(e, "gemini")
 
     async def generate_images(self, prompt: str, model: str | None = None) -> list[Any]:
-        client = await self._ensure_client()
-        selected_model = model or self.model
-        if selected_model:
-            response = await client.generate_content(prompt, model=selected_model)
-        else:
-            response = await client.generate_content(prompt)
-        return list(response.images)
+        try:
+            client = await self._ensure_client()
+            selected_model = model or self.model
+            
+            if selected_model:
+                response = await client.generate_content(prompt, model=selected_model)
+            else:
+                response = await client.generate_content(prompt)
+            
+            return list(response.images)
+        except AIGatewayError:
+            raise
+        except Exception as e:
+            raise classify_exception(e, "gemini")
 
     async def list_models(self) -> list[dict]:
         return []
