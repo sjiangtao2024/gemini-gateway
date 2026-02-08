@@ -1,68 +1,113 @@
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any
 
-import httpx
+import g4f
+from g4f.client import AsyncClient
 
 from app.providers.base import BaseProvider
-from app.services.model_registry import ModelRegistry
+from app.services.logger import logger
 
 
 class G4FProvider(BaseProvider):
+    """G4F Provider - 直接使用 g4f 库"""
     name = "g4f"
 
     def __init__(
         self,
-        base_url: str,
-        providers: Iterable[str] | None = None,
+        providers: list[str] | None = None,
         model_prefixes: list[str] | None = None,
-        client: httpx.AsyncClient | None = None,
         timeout: float = 30.0,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.providers = list(providers or [])
-        self.registry = ModelRegistry(prefixes=model_prefixes or [])
-        self._client = client
-        self._timeout = timeout
-
-    async def _get_json(self, path: str) -> Any:
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self._timeout) as client:
-            resp = await client.get(path)
-            resp.raise_for_status()
-            return resp.json()
-
-    async def _get_json_with_client(self, path: str) -> Any:
-        if self._client is None:
-            return await self._get_json(path)
-        resp = await self._client.get(path)
-        resp.raise_for_status()
-        return resp.json()
-
-    async def _post_json(self, path: str, payload: dict) -> Any:
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self._timeout) as client:
-            resp = await client.post(path, json=payload)
-            resp.raise_for_status()
-            return resp.json()
-
-    async def _post_json_with_client(self, path: str, payload: dict) -> Any:
-        if self._client is None:
-            return await self._post_json(path, payload)
-        resp = await self._client.post(path, json=payload)
-        resp.raise_for_status()
-        return resp.json()
-
+        self.providers = providers or []
+        self.model_prefixes = model_prefixes or []
+        self.timeout = timeout
+        self._client = AsyncClient()
+    
+    def _get_provider(self, model: str) -> Any | None:
+        """根据模型名获取对应的 g4f Provider"""
+        # 根据模型前缀判断 provider
+        model_lower = model.lower()
+        
+        if 'gpt-' in model_lower or 'chatgpt' in model_lower:
+            return g4f.Provider.OpenaiChat
+        elif 'qwen' in model_lower:
+            return g4f.Provider.Qwen
+        elif 'glm' in model_lower:
+            return g4f.Provider.GLM
+        elif 'grok' in model_lower:
+            return g4f.Provider.Grok
+        elif 'claude' in model_lower:
+            return g4f.Provider.Claude
+        elif 'deepseek' in model_lower:
+            return g4f.Provider.DeepSeek
+        
+        # 默认使用 OpenaiChat
+        return g4f.Provider.OpenaiChat
+    
     async def list_models(self) -> list[dict]:
-        providers = await self._get_json_with_client("/v1/providers")
-        provider_ids = [p.get("id") for p in providers if p.get("id")]
-        if self.providers:
-            allowed = set(self.providers)
-            provider_ids = [pid for pid in provider_ids if pid in allowed]
-        models: list[str] = []
-        for pid in provider_ids:
-            details = await self._get_json_with_client(f"/v1/providers/{pid}")
-            models.extend(details.get("models", []))
-        filtered = self.registry.filter_models(models)
-        return [{"id": model, "object": "model", "owned_by": "g4f"} for model in sorted(set(filtered))]
-
+        """列出支持的模型"""
+        # 常见模型列表
+        common_models = [
+            # ChatGPT
+            "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
+            # 国内模型
+            "qwen-2.5", "qwen-turbo", "qwen-max", "qwen-coder",
+            "kimi-k1", "kimi-1.5",
+            "glm-4", "glm-4v", "glm-4-flash",
+            "minimax-01",
+            # 其他
+            "grok-2", "grok-2-mini",
+            "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
+            "deepseek-chat", "deepseek-coder",
+        ]
+        
+        # 根据配置的 prefixes 过滤
+        if self.model_prefixes:
+            filtered = [m for m in common_models 
+                       if any(m.startswith(p) for p in self.model_prefixes)]
+        else:
+            filtered = common_models
+        
+        return [{"id": model, "object": "model", "owned_by": "g4f"} 
+                for model in filtered]
+    
     async def chat_completions(self, payload: dict) -> dict:
-        return await self._post_json_with_client("/v1/chat/completions", payload)
+        """调用 g4f 生成对话"""
+        model = payload.get("model", "gpt-4o")
+        messages = payload.get("messages", [])
+        
+        # 获取 provider
+        provider = self._get_provider(model)
+        
+        try:
+            # 使用 g4f 直接调用
+            response = await self._client.chat.completions.create(
+                model=model,
+                messages=messages,
+                provider=provider,
+            )
+            
+            # 提取内容
+            if hasattr(response, 'choices') and response.choices:
+                content = response.choices[0].message.content
+            else:
+                content = str(response)
+            
+            # 转换为 OpenAI 格式
+            return {
+                "id": f"chatcmpl-g4f",
+                "object": "chat.completion",
+                "model": model,
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": content
+                    },
+                    "finish_reason": "stop"
+                }]
+            }
+        except Exception as e:
+            logger.error(f"g4f chat_completions error: {e}")
+            raise
