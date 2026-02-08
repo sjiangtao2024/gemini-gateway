@@ -74,6 +74,7 @@ if settings.g4f.enabled:
         providers=settings.g4f.providers,
         model_prefixes=settings.g4f.model_prefixes,
         timeout=settings.g4f.timeout,
+        cookies_dir=settings.g4f.cookies_dir,
     )
 
 g4f_models: list[str] = []

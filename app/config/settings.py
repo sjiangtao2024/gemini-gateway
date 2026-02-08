@@ -34,7 +34,8 @@ class G4FSettings(BaseModel):
     enabled: bool = False
     providers: List[str] = Field(default_factory=list)
     model_prefixes: List[str] = Field(default_factory=list)
-    timeout: float = 30.0  # 超时时间（秒）
+    timeout: float = 30.0
+    cookies_dir: str = "/app/har_and_cookies"  # g4f cookie/har 文件目录  # 超时时间（秒）
 
 
 class Settings(BaseModel):
