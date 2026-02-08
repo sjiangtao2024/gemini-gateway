@@ -137,17 +137,50 @@ class GeminiProvider(BaseProvider):
         except Exception as e:
             raise classify_exception(e, "gemini")
 
-    async def generate_images(self, prompt: str, model: str | None = None) -> list[Any]:
+    async def generate_images(self, prompt: str, model: str | None = None) -> list[dict]:
+        """生成图像
+        
+        Returns:
+            图像数据列表，每个元素包含 url 或 b64_json
+        """
+        import base64
+        import aiohttp
+        
         try:
             client = await self._ensure_client()
             selected_model = model or self.model
             
-            if selected_model:
-                response = await client.generate_content(prompt, model=selected_model)
-            else:
-                response = await client.generate_content(prompt)
+            # 构建生图提示词
+            image_prompt = f"Generate an image: {prompt}"
             
-            return list(response.images)
+            if selected_model:
+                response = await client.generate_content(image_prompt, model=selected_model)
+            else:
+                response = await client.generate_content(image_prompt)
+            
+            # 处理返回的图像
+            images = []
+            for img in response.images:
+                # img 是 gemini_webapi.types.Image 对象
+                if hasattr(img, 'url') and img.url:
+                    # 下载图像数据
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(img.url, timeout=30) as resp:
+                                if resp.status == 200:
+                                    image_bytes = await resp.read()
+                                    b64_data = base64.b64encode(image_bytes).decode('utf-8')
+                                    images.append({"b64_json": b64_data})
+                                else:
+                                    # 如果下载失败，返回 URL
+                                    images.append({"url": img.url})
+                    except Exception as e:
+                        # 下载失败时返回 URL
+                        images.append({"url": img.url})
+                else:
+                    images.append({"url": ""})
+            
+            return images
         except AIGatewayError:
             raise
         except Exception as e:

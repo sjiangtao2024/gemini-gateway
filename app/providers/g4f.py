@@ -135,52 +135,97 @@ class G4FProvider(BaseProvider):
             raise
     
     async def generate_images(self, prompt: str, model: str | None = None, n: int = 1) -> list[dict]:
-        """使用 ChatGPT (g4f) 生成图像
+        """使用 g4f 生成图像
         
-        注意: ChatGPT 的图像生成是通过聊天界面触发的，
-        我们发送特定的图像生成请求，然后解析返回的图像链接。
+        使用 BingCreateImages (DALL-E 3) 或 OpenaiChat 生成图像
         
         Args:
             prompt: 图像生成提示词
-            model: 图像模型名称（默认使用 ChatGPT 的 gpt-image）
+            model: 图像模型名称（如 'dall-e-3', 'gpt-image'）
             n: 生成图像数量
             
         Returns:
-            图像数据列表，每个元素包含 url
+            图像数据列表，每个元素包含 b64_json
         """
-        try:
-            images = []
-            
-            for _ in range(n):
-                # 使用 ChatGPT 生成图像
-                # 发送图像生成请求
-                response = await self._client.chat.completions.create(
-                    model="gpt-4o",  # 使用支持图像的模型
-                    messages=[
-                        {"role": "user", "content": f"Generate an image: {prompt}"}
-                    ],
-                    provider=g4f.Provider.OpenaiChat,
-                )
-                
-                # 从响应中提取图像 URL
-                # ChatGPT 通常会在回复中包含图像链接
-                content = ""
-                if hasattr(response, 'choices') and response.choices:
-                    content = response.choices[0].message.content
-                
-                # 尝试从内容中提取图像 URL
-                import re
-                url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp)'
-                urls = re.findall(url_pattern, content, re.IGNORECASE)
-                
-                if urls:
-                    images.append({"url": urls[0]})
+        import base64
+        import aiohttp
+        
+        # 支持的图像模型映射
+        image_model = model or "dall-e-3"
+        
+        # 选择 provider
+        if image_model in ["dall-e-3", "dalle3", "dall-e"]:
+            provider = g4f.Provider.BingCreateImages
+        else:
+            # 使用 OpenaiChat 的图像功能
+            provider = g4f.Provider.OpenaiChat
+        
+        images = []
+        
+        for i in range(n):
+            try:
+                # 使用 create_async 生成图像
+                if hasattr(provider, 'create_async'):
+                    response_text = await provider.create_async(
+                        model=image_model,
+                        messages=[{"role": "user", "content": f"Create an image: {prompt}"}],
+                        timeout=int(self.timeout),
+                    )
+                    
+                    # 从响应中提取图像 URL
+                    import re
+                    url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp)'
+                    urls = re.findall(url_pattern, response_text, re.IGNORECASE)
+                    
+                    if urls:
+                        # 下载图像并转换为 base64
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(urls[0], timeout=30) as resp:
+                                if resp.status == 200:
+                                    image_bytes = await resp.read()
+                                    b64_data = base64.b64encode(image_bytes).decode('utf-8')
+                                    images.append({"b64_json": b64_data})
+                                else:
+                                    images.append({"url": urls[0]})
+                    else:
+                        # 如果没有找到 URL，可能是 base64 数据或其他格式
+                        if response_text.startswith('data:image'):
+                            # 已经是 data URI
+                            images.append({"url": response_text})
+                        else:
+                            logger.warning(f"No image found in response: {response_text[:100]}")
+                            images.append({"url": "", "error": "No image generated"})
                 else:
-                    # 如果没有找到 URL，返回空内容提示
-                    logger.warning(f"No image URL found in ChatGPT response: {content[:100]}")
-                    images.append({"url": "", "error": "No image generated"})
-            
-            return images[:n]
-        except Exception as e:
-            logger.error(f"ChatGPT image generation error: {e}")
-            raise
+                    #  Fallback: 使用 chat.completions
+                    response = await self._client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[{"role": "user", "content": f"Generate an image: {prompt}"}],
+                        provider=provider,
+                    )
+                    
+                    content = ""
+                    if hasattr(response, 'choices') and response.choices:
+                        content = response.choices[0].message.content
+                    
+                    # 尝试提取图像 URL
+                    import re
+                    url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp)'
+                    urls = re.findall(url_pattern, content, re.IGNORECASE)
+                    
+                    if urls:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(urls[0], timeout=30) as resp:
+                                if resp.status == 200:
+                                    image_bytes = await resp.read()
+                                    b64_data = base64.b64encode(image_bytes).decode('utf-8')
+                                    images.append({"b64_json": b64_data})
+                                else:
+                                    images.append({"url": urls[0]})
+                    else:
+                        images.append({"url": "", "error": "No image generated"})
+                        
+            except Exception as e:
+                logger.error(f"Image generation attempt {i+1} failed: {e}")
+                images.append({"url": "", "error": str(e)})
+        
+        return images

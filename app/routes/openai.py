@@ -228,16 +228,17 @@ async def images(payload: ImageGenerationRequest):
         
         data = []
         for image in images[:payload.n]:  # 限制数量
-            if isinstance(image, bytes):
-                encoded = base64.b64encode(image).decode("utf-8")
-            else:
-                encoded = str(image)
-            
+            # image 是 dict，包含 b64_json 或 url
             if payload.response_format == "url":
-                # 返回 data URL
-                item = {"url": f"data:image/png;base64,{encoded}"}
+                if "url" in image and image["url"]:
+                    item = {"url": image["url"]}
+                elif "b64_json" in image:
+                    item = {"url": f"data:image/png;base64,{image['b64_json']}"}
+                else:
+                    item = {"url": ""}
             else:
-                item = {"b64_json": encoded}
+                # 默认返回 b64_json
+                item = {"b64_json": image.get("b64_json", "")}
             
             data.append(item)
         
