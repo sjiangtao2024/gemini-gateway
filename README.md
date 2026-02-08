@@ -6,7 +6,7 @@
 
 - **🤖 多模型支持**: Gemini 2.5/3.0 (主力) + ChatGPT/Claude (备选，通过 gpt4free)
 - **🔄 双协议兼容**: OpenAI (`/v1/chat/completions`) + Claude (`/v1/messages`)
-- **📡 流式响应**: 支持 SSE (Server-Sent Events)
+- **🎨 图像生成**: 支持 Gemini 和 g4f (Bing Image Creator 等)
 - **🔧 配置热重载**: 修改配置无需重启服务
 - **📊 动态日志**: 运行时切换日志级别 (DEBUG/INFO/ERROR)
 - **🔐 Bearer 认证**: 标准 Token 认证
@@ -28,13 +28,15 @@ mkdir -p config data/gemini data/g4f/{cookies,har,media} logs
 cp docs/config-examples.md config/config.yaml
 # 编辑 config.yaml，设置 bearer_token
 
-# 3. 准备 Cookie
-# Gemini: 从浏览器获取 __Secure-1PSID 和 __Secure-1PSIDTS
+# 3. 准备认证文件
+# Gemini Cookie: 从浏览器获取 __Secure-1PSID 和 __Secure-1PSIDTS
 # 写入 data/gemini/cookies.json
 # 
-# g4f: 将 HAR/Cookie 文件放入对应目录
-# - data/g4f/har/       (HAR 抓包文件)
-# - data/g4f/cookies/   (Cookie JSON 文件)
+# g4f 认证文件（可选，根据使用的 Provider）:
+# - data/g4f/har/       (HAR 抓包文件，ChatGPT 需要)
+# - data/g4f/cookies/   (Cookie JSON 文件，Kimi/Qwen 需要)
+# 
+# 注意: g4f 生成的图片会自动保存到 data/g4f/media/
 
 # 4. 启动
 docker-compose up -d

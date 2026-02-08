@@ -198,6 +198,11 @@ cp chat.openai.com.har ./data/g4f/har/
 cp kimi.com.json ./data/g4f/cookies/
 ```
 
+**data/g4f/media/ 目录说明**：
+此目录用于存储 g4f 生成的媒体文件（图片、音频等），由 g4f 库自动写入。例如：
+- Bing Image Creator 生成的图片
+- Pollinations AI 生成的图片
+
 **支持的 Provider 和文件类型**：
 | Provider | 文件类型 | 文件名示例 |
 |---------|---------|-----------|
