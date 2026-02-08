@@ -19,6 +19,7 @@ class GeminiSettings(BaseModel):
     auto_refresh: bool = True
     models: List[str] = Field(default_factory=list)
     proxy: str | None = None
+    timeout: int = 30  # 超时时间（秒）
 
 
 class G4FSettings(BaseModel):
@@ -26,6 +27,7 @@ class G4FSettings(BaseModel):
     base_url: str = "http://localhost:1337"
     providers: List[str] = Field(default_factory=list)
     model_prefixes: List[str] = Field(default_factory=list)
+    timeout: float = 30.0  # 超时时间（秒）
 
 
 class Settings(BaseModel):
@@ -47,11 +49,15 @@ class Settings(BaseModel):
         return cls(
             server=ServerSettings(host=host, port=port),
             auth=AuthSettings(bearer_token=bearer_token),
-            gemini=GeminiSettings(cookie_path=cookie_path),
+            gemini=GeminiSettings(
+                cookie_path=cookie_path,
+                timeout=int(os.getenv("GEMINI_TIMEOUT", "30"))
+            ),
             g4f=G4FSettings(
                 enabled=g4f_enabled,
                 base_url=g4f_base_url,
                 providers=providers,
                 model_prefixes=prefixes,
+                timeout=float(os.getenv("G4F_TIMEOUT", "30.0"))
             ),
         )
