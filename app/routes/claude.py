@@ -1,18 +1,26 @@
 from fastapi import APIRouter, HTTPException
 
+from app.providers.gemini import GeminiProvider
 from app.providers.g4f import G4FProvider
 
 router = APIRouter()
 
 _gemini_models: list[str] = []
 _g4f_models: list[str] = []
+_gemini: GeminiProvider | None = None
 _g4f: G4FProvider | None = None
 
 
-def configure(gemini_models: list[str], g4f_models: list[str], g4f: G4FProvider | None) -> None:
-    global _gemini_models, _g4f_models, _g4f
+def configure(
+    gemini_models: list[str],
+    g4f_models: list[str],
+    gemini: GeminiProvider | None = None,
+    g4f: G4FProvider | None = None
+) -> None:
+    global _gemini_models, _g4f_models, _gemini, _g4f
     _gemini_models = gemini_models
     _g4f_models = g4f_models
+    _gemini = gemini
     _g4f = g4f
 
 
