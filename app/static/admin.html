@@ -201,11 +201,11 @@
             <h2>🔐 认证</h2>
             <div class="token-section">
                 <div class="form-group">
-                    <label for="bearer-token">Bearer Token</label>
-                    <input type="password" id="bearer-token" placeholder="输入你的 Bearer Token">
+                    <label for="api-key">API Key</label>
+                    <input type="password" id="api-key" placeholder="输入你的 API Key">
                 </div>
-                <button class="btn btn-secondary" onclick="saveToken()">保存 Token</button>
-                <span style="color: #666; font-size: 12px; margin-left: 10px;">Token 仅保存在浏览器本地存储中</span>
+                <button class="btn btn-secondary" onclick="saveApiKey()">保存 API Key</button>
+                <span style="color: #666; font-size: 12px; margin-left: 10px;">API Key 仅保存在浏览器本地存储中</span>
             </div>
         </div>
 
@@ -295,20 +295,20 @@
     </div>
 
     <script>
-        // 页面加载时恢复 token
+        // 页面加载时恢复 API Key
         document.addEventListener('DOMContentLoaded', function() {
-            const savedToken = localStorage.getItem('bearerToken');
-            if (savedToken) {
-                document.getElementById('bearer-token').value = savedToken;
+            const savedKey = localStorage.getItem('apiKey');
+            if (savedKey) {
+                document.getElementById('api-key').value = savedKey;
             }
             loadFileList();
         });
 
-        // 保存 Token
-        function saveToken() {
-            const token = document.getElementById('bearer-token').value;
-            localStorage.setItem('bearerToken', token);
-            showStatus('token-status', 'Token 已保存', 'success');
+        // 保存 API Key
+        function saveApiKey() {
+            const key = document.getElementById('api-key').value;
+            localStorage.setItem('apiKey', key);
+            alert('API Key 已保存');
         }
 
         // 切换标签页
@@ -322,9 +322,9 @@
 
         // 获取请求头
         function getHeaders() {
-            const token = localStorage.getItem('bearerToken') || '';
+            const key = localStorage.getItem('apiKey') || '';
             return {
-                'Authorization': 'Bearer ' + token,
+                'Authorization': 'Bearer ' + key,
                 'Content-Type': 'application/json'
             };
         }
@@ -411,7 +411,7 @@
                 const response = await fetch('/admin/files/har', {
                     method: 'POST',
                     headers: {
-                        'Authorization': 'Bearer ' + (localStorage.getItem('bearerToken') || '')
+                        'Authorization': 'Bearer ' + (localStorage.getItem('apiKey') || '')
                     },
                     body: formData
                 });
@@ -448,7 +448,7 @@
                 const response = await fetch('/admin/files/cookie', {
                     method: 'POST',
                     headers: {
-                        'Authorization': 'Bearer ' + (localStorage.getItem('bearerToken') || '')
+                        'Authorization': 'Bearer ' + (localStorage.getItem('apiKey') || '')
                     },
                     body: formData
                 });
