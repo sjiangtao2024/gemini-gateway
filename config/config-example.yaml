@@ -1,0 +1,49 @@
+# AI-Gateway 配置文件示例
+# 复制此文件为 config.yaml 并根据需要修改
+
+server:
+  host: "0.0.0.0"
+  port: 8022
+
+# 认证配置
+auth:
+  # API Key 用于 API 调用认证
+  # 支持通过以下方式传递:
+  #   - Header: Authorization: Bearer <api_key>
+  #   - Header: Authorization: <api_key>
+  #   - Header: X-API-Key: <api_key>
+  api_key: "your-api-key-here"
+  
+  # Bearer Token (兼容旧版，如设置则优先使用 api_key)
+  bearer_token: ""
+
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}"
+  file: "/app/logs/app.log"
+  rotation: "10 MB"
+  retention: "7 days"
+
+# Gemini 配置
+gemini:
+  enabled: true
+  cookie_path: "/app/data/gemini/cookies.json"
+  auto_refresh: true
+  timeout: 30
+  models:
+    - "gemini-1.5-pro"
+    - "gemini-1.5-flash"
+  proxy: null  # 例如: "http://proxy:8080"
+
+# g4f (GPT4Free) 配置
+g4f:
+  enabled: false
+  timeout: 30.0
+  cookies_dir: "/app/har_and_cookies"
+  providers: []  # 可选指定 provider，留空则自动选择
+  model_prefixes:
+    - "g4f-"
+    - "chatgpt-"
+    - "gpt-4"
+    - "claude-

@@ -1,4 +1,9 @@
-import os
-import sys
+import pytest
+from app.auth.middleware import configure_auth
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+@pytest.fixture(autouse=True)
+def reset_auth():
+    """每个测试前重置认证状态（无 API Key）"""
+    configure_auth("")
+    yield

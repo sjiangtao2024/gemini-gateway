@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.auth.middleware import auth_middleware
+from app.auth.middleware import auth_middleware, configure_auth
 from app.middlewares.logging import RequestLoggingMiddleware
 from app.config.manager import ConfigManager
 from app.config.watcher import ConfigWatcher
@@ -104,6 +104,9 @@ file_manager = FileManager(base_dir=har_cookies_path)
 
 # 配置 admin 路由
 configure_admin(config_manager, gemini_provider, g4f_provider, file_manager)
+
+# 配置认证（API Key）
+configure_auth(settings.auth.api_key)
 
 
 @app.on_event("shutdown")

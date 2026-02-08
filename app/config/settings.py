@@ -11,6 +11,7 @@ class ServerSettings(BaseModel):
 
 class AuthSettings(BaseModel):
     bearer_token: str = ""
+    api_key: str = ""  # API Key 认证，优先级高于 bearer_token
 
 
 class LoggingSettings(BaseModel):
@@ -50,6 +51,7 @@ class Settings(BaseModel):
         host = os.getenv("SERVER_HOST", "0.0.0.0")
         port = int(os.getenv("SERVER_PORT", "8022"))
         bearer_token = os.getenv("BEARER_TOKEN", "")
+        api_key = os.getenv("API_KEY", "")
         cookie_path = os.getenv("COOKIE_PATH", "")
         providers = [p for p in os.getenv("G4F_PROVIDERS", "").split(",") if p]
         prefixes = [p for p in os.getenv("G4F_MODEL_PREFIXES", "").split(",") if p]
@@ -57,7 +59,7 @@ class Settings(BaseModel):
         log_level = os.getenv("LOG_LEVEL", "INFO")
         return cls(
             server=ServerSettings(host=host, port=port),
-            auth=AuthSettings(bearer_token=bearer_token),
+            auth=AuthSettings(bearer_token=bearer_token, api_key=api_key),
             logging=LoggingSettings(level=log_level),
             gemini=GeminiSettings(
                 cookie_path=cookie_path,
