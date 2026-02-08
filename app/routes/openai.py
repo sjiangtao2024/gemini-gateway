@@ -251,18 +251,28 @@ async def images(payload: ImageGenerationRequest):
         raise HTTPException(status_code=503, detail="g4f provider not configured")
     
     try:
-        # g4f 可能有图像生成能力，尝试调用
-        # 注意：g4f 的图像生成 API 可能不同，这里作为预留
-        result = await _g4f.chat_completions({
-            "model": model,
-            "messages": [{"role": "user", "content": f"Generate an image: {prompt}"}]
-        })
+        # 使用 g4f 生成图像
+        images = await _g4f.generate_images(
+            prompt=prompt,
+            model=model,
+            n=payload.n
+        )
         
-        # 如果 g4f 返回图像，处理它
-        # 这里简化处理，实际可能需要根据 g4f 的响应格式调整
-        raise HTTPException(status_code=501, detail="Image generation via g4f not yet implemented")
+        # 格式化响应
+        data = []
+        for image in images[:payload.n]:
+            if payload.response_format == "url" and "url" in image:
+                item = {"url": image["url"]}
+            else:
+                # 默认返回 b64_json
+                item = {"b64_json": image.get("b64_json", "")}
+            data.append(item)
         
-    except HTTPException:
-        raise
+        return {
+            "created": 0,
+            "data": data
+        }
+        
     except Exception as e:
+        logger.error(f"Image generation via g4f failed: {e}")
         raise HTTPException(status_code=500, detail=f"Image generation failed: {e}")

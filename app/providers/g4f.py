@@ -131,3 +131,58 @@ class G4FProvider(BaseProvider):
         except Exception as e:
             logger.error(f"g4f chat_completions error: {e}")
             raise
+    
+    async def generate_images(self, prompt: str, model: str | None = None, n: int = 1) -> list[dict]:
+        """使用 g4f 生成图像
+        
+        Args:
+            prompt: 图像生成提示词
+            model: 图像模型名称（如 'flux', 'dall-e-3'）
+            n: 生成图像数量
+            
+        Returns:
+            图像数据列表，每个元素包含 url 或 b64_json
+        """
+        try:
+            # 获取图像 provider
+            image_provider = self._get_image_provider(model)
+            
+            images = []
+            for _ in range(n):
+                # 使用 g4f 的异步图像生成
+                response = await self._client.images.async_generate(
+                    prompt=prompt,
+                    model=model,
+                    provider=image_provider,
+                )
+                
+                # 处理响应
+                for image_data in response.data:
+                    if hasattr(image_data, 'url') and image_data.url:
+                        images.append({"url": image_data.url})
+                    elif hasattr(image_data, 'b64_json') and image_data.b64_json:
+                        images.append({"b64_json": image_data.b64_json})
+                    else:
+                        # 尝试获取 base64 数据
+                        images.append({"b64_json": str(image_data)})
+            
+            return images[:n]
+        except Exception as e:
+            logger.error(f"g4f generate_images error: {e}")
+            raise
+    
+    def _get_image_provider(self, model: str | None) -> Any | None:
+        """根据模型名获取图像生成 Provider"""
+        if not model:
+            return g4f.Provider.BingCreateImages  # 默认使用 Bing
+        
+        model_lower = model.lower()
+        
+        # 根据模型名选择 provider
+        if 'bing' in model_lower or 'dall' in model_lower:
+            return g4f.Provider.BingCreateImages
+        elif 'pollinations' in model_lower:
+            return g4f.Provider.PollinationsImage
+        
+        # 默认使用 Bing Create Images
+        return g4f.Provider.BingCreateImages
