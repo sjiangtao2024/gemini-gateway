@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir uv
 COPY requirements.txt /app/requirements.txt
 
 RUN uv venv /opt/venv \
-    && /opt/venv/bin/uv pip install -r /app/requirements.txt
+    && uv pip install -r /app/requirements.txt --python /opt/venv/bin/python
 
 ENV PATH="/opt/venv/bin:$PATH"
 
