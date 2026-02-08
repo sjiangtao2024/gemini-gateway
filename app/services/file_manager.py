@@ -14,9 +14,17 @@ class FileManager:
         self.cookies_dir = self.base_dir / "cookies"
         self.har_dir = self.base_dir / "har"
         
-        # 确保目录存在
-        self.cookies_dir.mkdir(parents=True, exist_ok=True)
-        self.har_dir.mkdir(parents=True, exist_ok=True)
+        # 确保目录存在（延迟创建，只在需要时）
+        self._ensure_dirs()
+    
+    def _ensure_dirs(self):
+        """确保目录存在，失败时不抛出异常"""
+        try:
+            self.cookies_dir.mkdir(parents=True, exist_ok=True)
+            self.har_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError) as e:
+            # 在测试环境或只读环境中可能无法创建目录
+            logger.warning(f"Cannot create directories at {self.base_dir}: {e}")
     
     async def save_har(self, file: UploadFile, provider: str | None = None) -> dict:
         """保存 HAR 文件
