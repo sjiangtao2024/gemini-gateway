@@ -13,6 +13,14 @@ class AuthSettings(BaseModel):
     bearer_token: str = ""
 
 
+class LoggingSettings(BaseModel):
+    level: str = "INFO"
+    format: str = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}"
+    file: str | None = None
+    rotation: str = "10 MB"
+    retention: str = "7 days"
+
+
 class GeminiSettings(BaseModel):
     enabled: bool = True
     cookie_path: str = ""
@@ -33,6 +41,7 @@ class G4FSettings(BaseModel):
 class Settings(BaseModel):
     server: ServerSettings = ServerSettings()
     auth: AuthSettings = AuthSettings()
+    logging: LoggingSettings = LoggingSettings()
     gemini: GeminiSettings = GeminiSettings()
     g4f: G4FSettings = G4FSettings()
 
@@ -46,9 +55,11 @@ class Settings(BaseModel):
         providers = [p for p in os.getenv("G4F_PROVIDERS", "").split(",") if p]
         prefixes = [p for p in os.getenv("G4F_MODEL_PREFIXES", "").split(",") if p]
         g4f_enabled = os.getenv("G4F_ENABLED", "false").lower() in {"1", "true", "yes"}
+        log_level = os.getenv("LOG_LEVEL", "INFO")
         return cls(
             server=ServerSettings(host=host, port=port),
             auth=AuthSettings(bearer_token=bearer_token),
+            logging=LoggingSettings(level=log_level),
             gemini=GeminiSettings(
                 cookie_path=cookie_path,
                 timeout=int(os.getenv("GEMINI_TIMEOUT", "30"))
