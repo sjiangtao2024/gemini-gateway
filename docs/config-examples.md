@@ -95,9 +95,33 @@ mkdir -p har_and_cookies generated_media
 
 > 注意：`.har` 与 cookies 含敏感凭据，禁止提交到版本库。
 
-## 3. Docker Compose 配置
+## 3. 数据目录结构
 
-### 3.1 标准部署
+推荐使用以下目录结构管理 Cookie 和 HAR 文件：
+
+```
+data/
+├── gemini/                 # Gemini Cookie（读写）
+│   └── cookies.json       # 自动读取和保存刷新后的 cookie
+└── g4f/                   # g4f 数据（只读）
+    ├── cookies/           # Cookie JSON 文件
+    │   ├── kimi.com.json
+    │   ├── qwen.com.json
+    │   └── glm.com.json
+    ├── har/               # HAR 抓包文件
+    │   ├── openai.com.har
+    │   └── google.com.har
+    └── media/             # 生成的媒体文件
+```
+
+**权限说明**:
+- `data/gemini/` 需要可写权限（gemini-webapi 自动刷新保存）
+- `data/g4f/` 只需要只读权限（g4f 服务内部管理）
+- 通过 `GEMINI_COOKIE_PATH` 环境变量指定 cookie 保存位置
+
+## 4. Docker Compose 配置
+
+### 4.1 标准部署
 
 ```yaml
 version: '3.8'
@@ -130,7 +154,7 @@ services:
       retries: 3
 ```
 
-### 3.2 树莓派 5 优化版
+### 4.2 树莓派 5 优化版
 
 ```yaml
 version: '3.8'
@@ -158,7 +182,7 @@ services:
     restart: unless-stopped
 ```
 
-### 3.3 开发环境（启用热重载）
+### 4.3 开发环境（启用热重载）
 
 ```yaml
 version: '3.8'
@@ -184,7 +208,7 @@ services:
     command: ["python", "-m", "app.main", "--reload"]
 ```
 
-## 4. 环境变量
+## 5. 环境变量
 
 可以通过环境变量覆盖配置文件：
 
@@ -223,7 +247,7 @@ services:
 BEARER_TOKEN=your-secure-token-here
 ```
 
-### 4.1 g4f 模型列表自动同步（可选）
+### 5.1 g4f 模型列表自动同步（可选）
 
 以下脚本会从 g4f 的 `/v1/providers` 与 `/v1/providers/{id}` 拉取可用模型列表，并根据 provider 白名单与模型前缀过滤后输出为可直接粘贴到 `config.yaml` 的 `g4f.model_prefixes`/`g4f.providers` 参考结果。
 
@@ -285,7 +309,7 @@ for m in sorted(models):
 PY
 ```
 
-## 5. Nginx 反向代理（可选）
+## 6. Nginx 反向代理（可选）
 
 ```nginx
 server {
@@ -310,7 +334,7 @@ server {
 }
 ```
 
-## 6. Systemd 服务（裸机部署）
+## 7. Systemd 服务（裸机部署）
 
 ```ini
 # /etc/systemd/system/ai-gateway.service
@@ -339,7 +363,7 @@ sudo systemctl start ai-gateway
 sudo systemctl status ai-gateway
 ```
 
-## 7. 热重载
+## 8. 热重载
 
 以下配置项支持热重载（修改 `config.yaml` 后无需重启服务，自动生效）：
 

@@ -9,14 +9,27 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - CONFIG_PATH=/app/config/config.yaml
+      - GEMINI_COOKIE_PATH=/app/data/gemini/cookies.json
       - G4F_ENABLED=false
     volumes:
-      - ./:/app
-      - ./config:/app/config
-      - ./cookies:/app/cookies
+      # 代码（开发模式热重载）
+      - ./app:/app/app
+      
+      # 配置（只读）
+      - ./config:/app/config:ro
+      
+      # Gemini 数据（读写 - 需要保存刷新后的 cookie）
+      - ./data/gemini:/app/data/gemini
+      
+      # g4f 数据（只读 - g4f 服务内部管理）
+      - ./data/g4f/cookies:/app/har_and_cookies/cookies:ro
+      - ./data/g4f/har:/app/har_and_cookies/har:ro
+      
+      # 日志
       - ./logs:/app/logs
-      - ./har_and_cookies:/app/har_and_cookies
-      - ./generated_media:/app/generated_media
+      
+      # g4f 生成媒体（可选）
+      - ./data/g4f/media:/app/generated_media
     command: >
       bash -lc "uv pip install -r /app/requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8022 --reload"
     restart: unless-stopped
