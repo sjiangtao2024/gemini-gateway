@@ -135,95 +135,118 @@ class G4FProvider(BaseProvider):
             raise
     
     async def generate_images(self, prompt: str, model: str | None = None, n: int = 1) -> list[dict]:
-        """使用 g4f 生成图像
+        """使用 OpenaiChat 生成图像
         
-        使用 BingCreateImages (DALL-E 3) 或 OpenaiChat 生成图像
+        使用 OpenaiChat 的 gpt-image 模型生成图像，需要有效的 HAR 文件
         
         Args:
             prompt: 图像生成提示词
-            model: 图像模型名称（如 'dall-e-3', 'gpt-image'）
+            model: 图像模型名称（默认 'gpt-image'）
             n: 生成图像数量
             
         Returns:
-            图像数据列表，每个元素包含 b64_json
+            图像数据列表，每个元素包含 b64_json 或 url
         """
         import base64
         import aiohttp
+        import os
+        import json
+        from g4f.errors import NoValidHarFileError
         
-        # 支持的图像模型映射
-        image_model = model or "dall-e-3"
+        # 使用 OpenaiChat 的 gpt-image 模型
+        image_model = model or "gpt-image"
+        provider = g4f.Provider.OpenaiChat
         
-        # 选择 provider
-        if image_model in ["dall-e-3", "dalle3", "dall-e"]:
-            provider = g4f.Provider.BingCreateImages
-        else:
-            # 使用 OpenaiChat 的图像功能
-            provider = g4f.Provider.OpenaiChat
+        # 预检查 HAR 文件
+        cookies_dir = g4f_cookies.get_cookies_dir()
+        har_dir = os.path.join(cookies_dir, "har")
+        har_files = []
+        if os.path.exists(har_dir):
+            har_files = [f for f in os.listdir(har_dir) if f.endswith(".har")]
+        
+        if not har_files:
+            logger.error(f"No HAR files found in {har_dir}")
+            return [{"url": "", "error": f"No HAR files found in {har_dir}. Please upload a valid ChatGPT HAR file."}]
+        
+        # 检查 HAR 文件是否包含授权信息
+        har_valid = False
+        for har_file in har_files:
+            har_path = os.path.join(har_dir, har_file)
+            try:
+                with open(har_path, "rb") as f:
+                    har_data = json.load(f)
+                
+                # 检查是否有 authorization 头或 access token
+                for entry in har_data.get("log", {}).get("entries", []):
+                    url = entry.get("request", {}).get("url", "")
+                    if url.startswith("https://chatgpt.com/"):
+                        headers = {h["name"].lower(): h["value"] for h in entry.get("request", {}).get("headers", [])}
+                        if "authorization" in headers:
+                            har_valid = True
+                            break
+                        # 检查 cookies
+                        cookies = entry.get("request", {}).get("cookies", [])
+                        if cookies:
+                            har_valid = True
+                            break
+            except Exception as e:
+                logger.warning(f"Failed to parse HAR file {har_file}: {e}")
+        
+        if not har_valid:
+            logger.error(f"HAR files found but no valid auth tokens. Files: {har_files}")
+            return [{"url": "", "error": f"HAR files found ({har_files}) but no valid authorization tokens. Please ensure you are logged into ChatGPT when exporting the HAR file."}]
         
         images = []
         
         for i in range(n):
             try:
                 # 使用 create_async 生成图像
-                if hasattr(provider, 'create_async'):
-                    response_text = await provider.create_async(
-                        model=image_model,
-                        messages=[{"role": "user", "content": f"Create an image: {prompt}"}],
-                        timeout=int(self.timeout),
-                    )
-                    
-                    # 从响应中提取图像 URL
-                    import re
-                    url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp)'
-                    urls = re.findall(url_pattern, response_text, re.IGNORECASE)
-                    
-                    if urls:
-                        # 下载图像并转换为 base64
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(urls[0], timeout=30) as resp:
-                                if resp.status == 200:
-                                    image_bytes = await resp.read()
-                                    b64_data = base64.b64encode(image_bytes).decode('utf-8')
-                                    images.append({"b64_json": b64_data})
-                                else:
-                                    images.append({"url": urls[0]})
+                response_text = await provider.create_async(
+                    model=image_model,
+                    messages=[{"role": "user", "content": f"Generate an image: {prompt}"}],
+                    timeout=int(self.timeout),
+                )
+                
+                # 尝试解析响应
+                # 1. 检查是否是直接的图像 URL
+                import re
+                url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp)'
+                urls = re.findall(url_pattern, response_text, re.IGNORECASE)
+                
+                if urls:
+                    # 下载图像并转换为 base64
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(urls[0], timeout=30) as resp:
+                            if resp.status == 200:
+                                image_bytes = await resp.read()
+                                b64_data = base64.b64encode(image_bytes).decode('utf-8')
+                                images.append({"b64_json": b64_data})
+                            else:
+                                images.append({"url": urls[0]})
+                elif response_text.startswith('data:image'):
+                    # 已经是 data URI，提取 base64 部分
+                    if 'base64,' in response_text:
+                        b64_data = response_text.split('base64,')[1]
+                        images.append({"b64_json": b64_data})
                     else:
-                        # 如果没有找到 URL，可能是 base64 数据或其他格式
-                        if response_text.startswith('data:image'):
-                            # 已经是 data URI
-                            images.append({"url": response_text})
-                        else:
-                            logger.warning(f"No image found in response: {response_text[:100]}")
-                            images.append({"url": "", "error": "No image generated"})
+                        images.append({"url": response_text})
+                elif len(response_text) > 100 and not response_text.startswith('http'):
+                    # 可能是直接的 base64 数据
+                    images.append({"b64_json": response_text})
                 else:
-                    #  Fallback: 使用 chat.completions
-                    response = await self._client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[{"role": "user", "content": f"Generate an image: {prompt}"}],
-                        provider=provider,
-                    )
-                    
-                    content = ""
-                    if hasattr(response, 'choices') and response.choices:
-                        content = response.choices[0].message.content
-                    
-                    # 尝试提取图像 URL
-                    import re
-                    url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp)'
-                    urls = re.findall(url_pattern, content, re.IGNORECASE)
-                    
-                    if urls:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(urls[0], timeout=30) as resp:
-                                if resp.status == 200:
-                                    image_bytes = await resp.read()
-                                    b64_data = base64.b64encode(image_bytes).decode('utf-8')
-                                    images.append({"b64_json": b64_data})
-                                else:
-                                    images.append({"url": urls[0]})
-                    else:
-                        images.append({"url": "", "error": "No image generated"})
+                    logger.warning(f"No image found in response: {response_text[:200]}")
+                    images.append({"url": "", "error": "No image generated"})
                         
+            except NoValidHarFileError as e:
+                logger.error(f"No valid HAR file found: {e}")
+                error_msg = (
+                    "No valid HAR file found. Please ensure:\n"
+                    "1. You are logged into chatgpt.com\n"
+                    "2. Export HAR file from a logged-in session\n"
+                    "3. Place the HAR file in the har_and_cookies/har/ directory\n"
+                    f"Current cookies_dir: {g4f_cookies.get_cookies_dir()}"
+                )
+                images.append({"url": "", "error": error_msg})
             except Exception as e:
                 logger.error(f"Image generation attempt {i+1} failed: {e}")
                 images.append({"url": "", "error": str(e)})
