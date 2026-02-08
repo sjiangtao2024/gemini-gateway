@@ -66,28 +66,30 @@ class G4FProvider(BaseProvider):
         return g4f.Provider.OpenaiChat
     
     async def list_models(self) -> list[dict]:
-        """列出支持的模型"""
-        # 常见模型列表
-        common_models = [
-            # ChatGPT
-            "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
-            # 国内模型
-            "qwen-2.5", "qwen-turbo", "qwen-max", "qwen-coder",
-            "kimi-k1", "kimi-1.5",
-            "glm-4", "glm-4v", "glm-4-flash",
-            "minimax-01",
-            # 其他
-            "grok-2", "grok-2-mini",
-            "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
-            "deepseek-chat", "deepseek-coder",
-        ]
+        """列出支持的模型 - 从 g4f 库动态获取"""
+        models = []
+        
+        # 从 g4f.Provider.OpenaiChat 获取最新模型列表
+        try:
+            from g4f.Provider.openai.models import models as openai_models
+            models.extend(openai_models)
+        except Exception:
+            # 如果获取失败，使用默认列表
+            models = [
+                "gpt-5-2", "gpt-5-2-instant", "gpt-5-2-thinking",
+                "gpt-5-1", "gpt-5-1-instant", "gpt-5-1-thinking",
+                "gpt-5", "gpt-5-instant", "gpt-5-thinking",
+                "gpt-4", "gpt-4.1", "gpt-4.1-mini", "gpt-4.5",
+                "gpt-4o", "gpt-4o-mini",
+                "o1", "o1-mini", "o3-mini", "o3-mini-high", "o4-mini", "o4-mini-high",
+            ]
         
         # 根据配置的 prefixes 过滤
         if self.model_prefixes:
-            filtered = [m for m in common_models 
+            filtered = [m for m in models 
                        if any(m.startswith(p) for p in self.model_prefixes)]
         else:
-            filtered = common_models
+            filtered = models
         
         return [{"id": model, "object": "model", "owned_by": "g4f"} 
                 for model in filtered]
