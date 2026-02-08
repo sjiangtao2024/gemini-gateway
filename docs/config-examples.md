@@ -17,7 +17,7 @@ auth:
 logging:
   level: "INFO"        # 日志级别: DEBUG, INFO, WARNING, ERROR
   format: "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}"
-  file: "/app/logs/gateway.log"
+  file: "/app/logs/gateway.log"  # 可选：文件日志路径
   rotation: "10 MB"    # 日志轮转大小
   retention: "7 days"  # 日志保留时间
 
@@ -25,6 +25,7 @@ gemini:
   enabled: true
   cookie_path: "/app/cookies/gemini.json"
   auto_refresh: true   # 自动刷新 __Secure-1PSIDTS
+  timeout: 30          # 请求超时（秒）
   models:
     - "gemini-2.5-pro"
     - "gemini-2.5-flash"
@@ -35,6 +36,7 @@ gemini:
 
 g4f:
   enabled: true
+  timeout: 30.0        # 请求超时（秒）
   providers:
     - "Qwen"
     - "Kimi"
@@ -336,6 +338,23 @@ sudo systemctl enable ai-gateway
 sudo systemctl start ai-gateway
 sudo systemctl status ai-gateway
 ```
+
+## 7. 热重载
+
+以下配置项支持热重载（修改 `config.yaml` 后无需重启服务，自动生效）：
+
+| 配置项 | 生效方式 | 说明 |
+|--------|---------|------|
+| `logging.level` | 立即生效 | 日志级别实时切换 |
+| `logging.file` | 需重启 | 文件日志路径 |
+| `auth.bearer_token` | 立即生效 | 认证令牌更新 |
+| `gemini.models` | 立即生效 | 模型列表更新 |
+| `gemini.timeout` | 下次请求生效 | 超时时间 |
+| `g4f.timeout` | 下次请求生效 | 超时时间 |
+
+**不支持热重载的配置**（修改后需要重启服务）：
+- `server.host` / `server.port` - 监听地址和端口
+- `gemini.cookie_path` - Cookie 文件路径（可通过 `/admin/cookies` 接口更新）
 
 ---
 
