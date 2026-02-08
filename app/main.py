@@ -62,6 +62,11 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 async def root():
     return FileResponse("app/static/admin.html")
 
+# 测试页面
+@app.get("/test")
+async def test_page():
+    return FileResponse("app/static/test.html")
+
 app.include_router(openai_router)
 app.include_router(claude_router)
 app.include_router(admin_router)

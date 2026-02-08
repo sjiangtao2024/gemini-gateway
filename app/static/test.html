@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Gateway API 测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input[type="text"],
+        input[type="password"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background 0.2s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .result-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow: auto;
+        }
+        .result-box pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            margin-top: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .chat-history {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .chat-message.user {
+            background: #e3f2fd;
+            margin-left: 20%;
+        }
+        .chat-message.assistant {
+            background: #f5f5f5;
+            margin-right: 20%;
+        }
+        .chat-message .role {
+            font-weight: bold;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .status {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: #666;
+        }
+        .tab.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 AI-Gateway API 测试页面</h1>
+
+        <!-- API 配置 -->
+        <div class="section">
+            <h2>🔐 API 配置</h2>
+            <div class="form-group">
+                <label for="api-key">API Key</label>
+                <input type="password" id="api-key" placeholder="输入你的 API Key">
+            </div>
+            <div class="form-group">
+                <label for="api-base">API Base URL</label>
+                <input type="text" id="api-base" value="http://192.168.1.112:8022" placeholder="http://localhost:8022">
+            </div>
+            <button class="btn btn-secondary" onclick="testConnection()">🔄 测试连接</button>
+            <button class="btn btn-secondary" onclick="loadModels()">📋 加载模型列表</button>
+            <div id="connection-status"></div>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('chat')">💬 对话测试</div>
+            <div class="tab" onclick="switchTab('image')">🎨 图像生成</div>
+        </div>
+
+        <!-- 对话测试 -->
+        <div id="chat-tab" class="tab-content active">
+            <div class="section">
+                <h2>💬 对话测试（支持多轮对话）</h2>
+                <div class="info-box">
+                    <p><strong>说明：</strong>此测试支持多轮对话历史。每次发送消息时，会将之前的对话记录一起发送给 API。</p>
+                    <p>当前模型支持：Gemini 3.0/1.5 系列、GPT-5/4/o 系列（通过 g4f）</p>
+                </div>
+
+                <div class="two-column">
+                    <div>
+                        <div class="form-group">
+                            <label for="chat-model">选择模型</label>
+                            <select id="chat-model">
+                                <option value="gemini-auto">gemini-auto (自动选择)</option>
+                                <option value="gemini-3.0-pro">gemini-3.0-pro</option>
+                                <option value="gemini-3.0-flash">gemini-3.0-flash</option>
+                                <option value="gpt-5-2">gpt-5-2 (g4f)</option>
+                                <option value="gpt-4o">gpt-4o (g4f)</option>
+                                <option value="gpt-4.1">gpt-4.1 (g4f)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>对话历史（可编辑）</label>
+                            <div class="chat-history" id="chat-history">
+                                <div class="chat-message system">
+                                    <div class="role">System</div>
+                                    <div>你是一个 helpful assistant。</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user-message">输入消息</label>
+                            <textarea id="user-message" placeholder="输入你的消息..." rows="3"></textarea>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="sendMessage()">📤 发送消息</button>
+                        <button class="btn btn-danger" onclick="clearHistory()">🗑️ 清空对话</button>
+                        <div id="chat-status"></div>
+                    </div>
+
+                    <div>
+                        <div class="form-group">
+                            <label>原始请求/响应</label>
+                            <div class="result-box">
+                                <pre id="chat-raw">点击"发送消息"查看请求和响应详情...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图像生成测试 -->
+        <div id="image-tab" class="tab-content">
+            <div class="section">
+                <h2>🎨 图像生成测试</h2>
+                <div class="info-box">
+                    <p><strong>说明：</strong>使用 g4f 的 gpt-image 模型生成图像。需要有效的 ChatGPT HAR 文件。</p>
+                </div>
+
+                <div class="two-column">
+                    <div>
+                        <div class="form-group">
+                            <label for="image-model">图像模型</label>
+                            <select id="image-model">
+                                <option value="gpt-image">gpt-image (ChatGPT DALL-E)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="image-prompt">图像描述</label>
+                            <textarea id="image-prompt" placeholder="描述你想要生成的图像..." rows="4">a cute cat sitting on a chair, anime style</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="image-n">生成数量</label>
+                            <select id="image-n">
+                                <option value="1">1 张</option>
+                                <option value="2">2 张</option>
+                                <option value="4">4 张</option>
+                            </select>
+                        </div>
+
+                        <button class="btn btn-success" onclick="generateImage()">🎨 生成图像</button>
+                        <div id="image-status"></div>
+                    </div>
+
+                    <div>
+                        <div class="form-group">
+                            <label>生成结果</label>
+                            <div id="image-result" style="text-align: center;">
+                                <p style="color: #999; padding: 50px;">点击"生成图像"查看结果...</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>响应详情</label>
+                            <div class="result-box">
+                                <pre id="image-raw"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局对话历史
+        let chatHistory = [
+            {role: "system", content: "你是一个 helpful assistant。"}
+        ];
+
+        // 页面加载时恢复 API Key
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedKey = localStorage.getItem('apiKey');
+            if (savedKey) {
+                document.getElementById('api-key').value = savedKey;
+            }
+        });
+
+        // 获取请求头
+        function getHeaders() {
+            const key = document.getElementById('api-key').value;
+            localStorage.setItem('apiKey', key);
+            return {
+                'Authorization': 'Bearer ' + key,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        // 获取 API Base
+        function getApiBase() {
+            return document.getElementById('api-base').value.replace(/\/$/, '');
+        }
+
+        // 切换标签页
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // 显示状态
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = message;
+            el.className = 'status ' + type;
+        }
+
+        // 测试连接
+        async function testConnection() {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.innerHTML = '<span class="loading"></span> 连接中...';
+
+            try {
+                const response = await fetch(getApiBase() + '/health');
+                const data = await response.json();
+                showStatus('connection-status', '✅ 连接成功！状态: ' + data.status + '<br>Providers: ' + JSON.stringify(data.providers), 'success');
+            } catch (error) {
+                showStatus('connection-status', '❌ 连接失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载模型列表
+        async function loadModels() {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.innerHTML = '<span class="loading"></span> 加载中...';
+
+            try {
+                const response = await fetch(getApiBase() + '/v1/models', {
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+                
+                // 更新模型选择器
+                const chatSelect = document.getElementById('chat-model');
+                chatSelect.innerHTML = '';
+                
+                data.data.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.id + ' (' + model.owned_by + ')';
+                    chatSelect.appendChild(option);
+                });
+                
+                showStatus('connection-status', '✅ 已加载 ' + data.data.length + ' 个模型', 'success');
+            } catch (error) {
+                showStatus('connection-status', '❌ 加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 更新对话历史显示
+        function updateChatHistory() {
+            const container = document.getElementById('chat-history');
+            container.innerHTML = '';
+            
+            chatHistory.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'chat-message ' + msg.role;
+                div.innerHTML = `<div class="role">${msg.role}</div><div>${escapeHtml(msg.content)}</div>`;
+                container.appendChild(div);
+            });
+            
+            // 滚动到底部
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 转义 HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const messageInput = document.getElementById('user-message');
+            const message = messageInput.value.trim();
+            const model = document.getElementById('chat-model').value;
+            
+            if (!message) {
+                showStatus('chat-status', '请输入消息', 'error');
+                return;
+            }
+
+            const statusEl = document.getElementById('chat-status');
+            statusEl.innerHTML = '<span class="loading"></span> 发送中...';
+
+            // 添加用户消息到历史
+            chatHistory.push({role: "user", content: message});
+            updateChatHistory();
+            messageInput.value = '';
+
+            // 构建请求
+            const requestBody = {
+                model: model,
+                messages: chatHistory,
+                stream: false
+            };
+
+            try {
+                const response = await fetch(getApiBase() + '/v1/chat/completions', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                // 显示原始请求/响应
+                document.getElementById('chat-raw').textContent = 
+                    '=== 请求 ===\n' + JSON.stringify(requestBody, null, 2) + 
+                    '\n\n=== 响应 ===\n' + JSON.stringify(data, null, 2);
+
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    // 添加助手回复到历史
+                    chatHistory.push({
+                        role: "assistant", 
+                        content: data.choices[0].message.content
+                    });
+                    updateChatHistory();
+                    showStatus('chat-status', '✅ 回复成功', 'success');
+                } else if (data.error) {
+                    showStatus('chat-status', '❌ 错误: ' + data.error.message, 'error');
+                }
+            } catch (error) {
+                showStatus('chat-status', '❌ 请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // 清空对话历史
+        function clearHistory() {
+            chatHistory = [{role: "system", content: "你是一个 helpful assistant。"}];
+            updateChatHistory();
+            document.getElementById('chat-raw').textContent = '对话已清空...';
+        }
+
+        // 生成图像
+        async function generateImage() {
+            const prompt = document.getElementById('image-prompt').value.trim();
+            const model = document.getElementById('image-model').value;
+            const n = parseInt(document.getElementById('image-n').value);
+            
+            if (!prompt) {
+                showStatus('image-status', '请输入图像描述', 'error');
+                return;
+            }
+
+            const statusEl = document.getElementById('image-status');
+            statusEl.innerHTML = '<span class="loading"></span> 生成中（可能需要 30-60 秒）...';
+
+            const requestBody = {
+                model: model,
+                prompt: prompt,
+                n: n,
+                response_format: "b64_json"
+            };
+
+            try {
+                const response = await fetch(getApiBase() + '/v1/images', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                // 显示原始响应
+                document.getElementById('image-raw').textContent = 
+                    '=== 请求 ===\n' + JSON.stringify(requestBody, null, 2) + 
+                    '\n\n=== 响应 ===\n' + JSON.stringify(data, null, 2);
+
+                // 显示图像
+                const resultContainer = document.getElementById('image-result');
+                resultContainer.innerHTML = '';
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach((img, index) => {
+                        if (img.b64_json) {
+                            const imgEl = document.createElement('img');
+                            imgEl.src = 'data:image/png;base64,' + img.b64_json;
+                            imgEl.className = 'image-preview';
+                            imgEl.title = 'Generated image ' + (index + 1);
+                            resultContainer.appendChild(imgEl);
+                            
+                            // 添加下载链接
+                            const downloadLink = document.createElement('a');
+                            downloadLink.href = imgEl.src;
+                            downloadLink.download = 'generated_' + (index + 1) + '.png';
+                            downloadLink.textContent = '⬇️ 下载图片 ' + (index + 1);
+                            downloadLink.style.display = 'block';
+                            downloadLink.style.marginTop = '10px';
+                            resultContainer.appendChild(downloadLink);
+                        } else if (img.error) {
+                            resultContainer.innerHTML += '<p style="color: red;">Error: ' + img.error + '</p>';
+                        }
+                    });
+                    showStatus('image-status', '✅ 图像生成成功！', 'success');
+                } else {
+                    showStatus('image-status', '❌ 生成失败', 'error');
+                }
+            } catch (error) {
+                showStatus('image-status', '❌ 请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // 初始化
+        updateChatHistory();
+    </script>
+</body>
+</html>

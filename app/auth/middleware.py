@@ -13,7 +13,7 @@ def configure_auth(api_key: str = ""):
 
 async def auth_middleware(request: Request, call_next):
     # 公开路径白名单
-    public_paths = ["/health", "/", "/static/admin.html"]
+    public_paths = ["/health", "/", "/test", "/static/admin.html", "/static/test.html"]
     if request.url.path.startswith("/static/") or request.url.path in public_paths:
         return await call_next(request)
     
