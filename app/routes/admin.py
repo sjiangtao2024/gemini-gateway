@@ -6,12 +6,14 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.config.manager import ConfigManager
+from app.providers.g4f import G4FProvider
 from app.providers.gemini import GeminiProvider
 from app.services.logger import LogLevel, log_manager
 
 router = APIRouter()
 _config_manager: ConfigManager | None = None
 _gemini: GeminiProvider | None = None
+_g4f: G4FProvider | None = None
 
 
 class CookieUpdate(BaseModel):
@@ -30,15 +32,49 @@ class LogLevelUpdate(BaseModel):
     level: LogLevel
 
 
-def configure(manager: ConfigManager | None, gemini: GeminiProvider | None = None) -> None:
-    global _config_manager, _gemini
+def configure(manager: ConfigManager | None, gemini: GeminiProvider | None = None, g4f: G4FProvider | None = None) -> None:
+    global _config_manager, _gemini, _g4f
     _config_manager = manager
     _gemini = gemini
+    _g4f = g4f
 
 
 @router.get("/health")
 async def health():
-    return {"status": "healthy"}
+    """健康检查，包含各 provider 状态"""
+    providers = {}
+    
+    # Gemini 状态
+    if _gemini is None:
+        providers["gemini"] = "not_configured"
+    else:
+        try:
+            # 简单检查：尝试加载 cookie
+            _gemini.load_cookie_values(_gemini.cookie_path)
+            providers["gemini"] = "ok"
+        except Exception as e:
+            providers["gemini"] = f"error: {type(e).__name__}"
+    
+    # g4f 状态
+    if _g4f is None:
+        providers["g4f"] = "not_configured"
+    else:
+        providers["g4f"] = "ok"
+    
+    # 整体状态：至少有一个 provider OK 即为 healthy
+    configured = [v for v in providers.values() if v != "not_configured"]
+    if configured and all(v == "ok" for v in configured):
+        overall = "healthy"
+    elif configured and any(v == "ok" for v in configured):
+        overall = "degraded"
+    else:
+        overall = "unhealthy"
+    
+    return {
+        "status": overall,
+        "version": "1.0.0",
+        "providers": providers
+    }
 
 
 @router.post("/admin/config/reload")
