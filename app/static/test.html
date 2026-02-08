@@ -253,12 +253,39 @@
                         <div class="form-group">
                             <label for="chat-model">选择模型</label>
                             <select id="chat-model">
-                                <option value="gemini-auto">gemini-auto (自动选择)</option>
-                                <option value="gemini-3.0-pro">gemini-3.0-pro</option>
-                                <option value="gemini-3.0-flash">gemini-3.0-flash</option>
-                                <option value="gpt-5-2">gpt-5-2 (g4f)</option>
-                                <option value="gpt-4o">gpt-4o (g4f)</option>
-                                <option value="gpt-4.1">gpt-4.1 (g4f)</option>
+                                <optgroup label="Gemini (Google)">
+                                    <option value="gemini-auto">gemini-auto (自动选择)</option>
+                                    <option value="gemini-3.0-pro">gemini-3.0-pro</option>
+                                    <option value="gemini-3.0-flash">gemini-3.0-flash</option>
+                                    <option value="gemini-3.0-flash-thinking">gemini-3.0-flash-thinking</option>
+                                </optgroup>
+                                <optgroup label="GPT-5 Series (g4f)">
+                                    <option value="gpt-5-2">gpt-5-2</option>
+                                    <option value="gpt-5-2-instant">gpt-5-2-instant</option>
+                                    <option value="gpt-5-2-thinking">gpt-5-2-thinking</option>
+                                    <option value="gpt-5-1">gpt-5-1</option>
+                                    <option value="gpt-5-1-instant">gpt-5-1-instant</option>
+                                    <option value="gpt-5-1-thinking">gpt-5-1-thinking</option>
+                                    <option value="gpt-5">gpt-5</option>
+                                    <option value="gpt-5-instant">gpt-5-instant</option>
+                                    <option value="gpt-5-thinking">gpt-5-thinking</option>
+                                </optgroup>
+                                <optgroup label="GPT-4 Series (g4f)">
+                                    <option value="gpt-4.5">gpt-4.5</option>
+                                    <option value="gpt-4.1">gpt-4.1</option>
+                                    <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                                    <option value="gpt-4o">gpt-4o</option>
+                                    <option value="gpt-4o-mini">gpt-4o-mini</option>
+                                    <option value="gpt-4">gpt-4</option>
+                                </optgroup>
+                                <optgroup label="o-Series (g4f)">
+                                    <option value="o1">o1</option>
+                                    <option value="o1-mini">o1-mini</option>
+                                    <option value="o3-mini">o3-mini</option>
+                                    <option value="o3-mini-high">o3-mini-high</option>
+                                    <option value="o4-mini">o4-mini</option>
+                                    <option value="o4-mini-high">o4-mini-high</option>
+                                </optgroup>
                             </select>
                         </div>
 
