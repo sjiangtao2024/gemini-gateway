@@ -107,10 +107,32 @@ async def list_models():
 
 
 @router.post("/v1/messages")
-async def messages(payload: dict):
-    model = payload.get("model", "")
+async def messages(payload: ClaudeRequest):
+    """Claude 协议消息完成 - 支持 Gemini 和 g4f"""
+    model = payload.model
+    
     if _is_gemini_model(model):
-        raise HTTPException(status_code=501, detail="Gemini not supported for Claude protocol")
+        if _gemini is None:
+            raise HTTPException(status_code=503, detail="Gemini provider not configured")
+        
+        # 转换为 OpenAI 格式并调用
+        openai_messages = _claude_to_openai_messages(payload)
+        result = await _gemini.chat_completions(
+            messages=openai_messages,
+            model=model
+        )
+        
+        return _openai_to_claude_response(result, model)
+    
+    # g4f 模型
     if _g4f is None:
         raise HTTPException(status_code=503, detail="g4f provider not configured")
-    return await _g4f.chat_completions(payload)
+    
+    # g4f 可以直接接受 OpenAI 格式
+    openai_payload = {
+        "model": model,
+        "messages": _claude_to_openai_messages(payload)
+    }
+    result = await _g4f.chat_completions(openai_payload)
+    
+    return _openai_to_claude_response(result, model)
