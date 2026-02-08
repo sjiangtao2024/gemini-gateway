@@ -28,7 +28,8 @@ class FileManager:
     def __init__(self, base_dir: str = "/app/har_and_cookies"):
         self.base_dir = Path(base_dir)
         self.cookies_dir = self.base_dir / "cookies"
-        self.har_dir = self.base_dir / "har"
+        # g4f 只查找根目录，不递归子目录，所以 HAR 文件直接放在 base_dir
+        self.har_dir = self.base_dir
         
         # 确保目录存在（延迟创建，只在需要时）
         self._ensure_dirs()
