@@ -1,9 +1,9 @@
 version: "3.8"
 
 services:
-  gemini-gateway:
+  ai-gateway:
     build: .
-    container_name: gemini-gateway
+    container_name: ai-gateway
     ports:
       - "8022:8022"
     environment:

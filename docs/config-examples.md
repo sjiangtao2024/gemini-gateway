@@ -4,7 +4,7 @@
 
 ```yaml
 # ============================================
-# Gemini-Gateway 配置文件
+# AI-Gateway 配置文件
 # ============================================
 
 server:
@@ -101,9 +101,9 @@ mkdir -p har_and_cookies generated_media
 version: '3.8'
 
 services:
-  gemini-gateway:
+  ai-gateway:
     build: .
-    container_name: gemini-gateway
+    container_name: ai-gateway
     ports:
       - "8022:8022"
     volumes:
@@ -134,9 +134,9 @@ services:
 version: '3.8'
 
 services:
-  gemini-gateway:
+  ai-gateway:
     build: .
-    container_name: gemini-gateway
+    container_name: ai-gateway
     ports:
       - "8022:8022"
     volumes:
@@ -162,9 +162,9 @@ services:
 version: '3.8'
 
 services:
-  gemini-gateway:
+  ai-gateway:
     build: .
-    container_name: gemini-gateway-dev
+    container_name: ai-gateway-dev
     ports:
       - "8022:8022"
     volumes:
@@ -204,7 +204,7 @@ services:
 version: '3.8'
 
 services:
-  gemini-gateway:
+  ai-gateway:
     build: .
     ports:
       - "8022:8022"
@@ -311,18 +311,18 @@ server {
 ## 6. Systemd 服务（裸机部署）
 
 ```ini
-# /etc/systemd/system/gemini-gateway.service
+# /etc/systemd/system/ai-gateway.service
 [Unit]
-Description=Gemini Gateway
+Description=AI Gateway
 After=network.target
 
 [Service]
 Type=simple
 User=gateway
-WorkingDirectory=/opt/gemini-gateway
+WorkingDirectory=/opt/ai-gateway
 Environment=PYTHONUNBUFFERED=1
-Environment=CONFIG_PATH=/opt/gemini-gateway/config/config.yaml
-ExecStart=/opt/gemini-gateway/venv/bin/python -m app.main
+Environment=CONFIG_PATH=/opt/ai-gateway/config/config.yaml
+ExecStart=/opt/ai-gateway/venv/bin/python -m app.main
 Restart=always
 RestartSec=10
 
@@ -332,9 +332,9 @@ WantedBy=multi-user.target
 
 启用服务：
 ```bash
-sudo systemctl enable gemini-gateway
-sudo systemctl start gemini-gateway
-sudo systemctl status gemini-gateway
+sudo systemctl enable ai-gateway
+sudo systemctl start ai-gateway
+sudo systemctl status ai-gateway
 ```
 
 ---

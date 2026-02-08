@@ -1,6 +1,6 @@
-# Gemini-Gateway
+# AI-Gateway
 
-一个支持 OpenAI 和 Claude 双协议的 AI 模型网关，统一接入 Gemini 和 ChatGPT 模型。
+一个支持 OpenAI 和 Claude 双协议的 AI 模型网关，统一接入 Gemini、ChatGPT 及其他开源模型。
 
 ## ✨ 核心特性
 
@@ -19,8 +19,8 @@
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/yourusername/gemini-gateway.git
-cd gemini-gateway
+git clone https://github.com/yourusername/ai-gateway.git
+cd ai-gateway
 
 # 2. 准备配置
 mkdir -p config cookies logs
@@ -74,7 +74,7 @@ claude --model gemini-2.5-pro
 ## 🏗️ 项目结构
 
 ```
-gemini-gateway/
+ai-gateway/
 ├── app/                    # 应用代码
 │   ├── main.py            # FastAPI 入口
 │   ├── config/            # 配置管理

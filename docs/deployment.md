@@ -22,8 +22,8 @@
 ### 2.1 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/gemini-gateway.git
-cd gemini-gateway
+git clone https://github.com/yourusername/ai-gateway.git
+cd ai-gateway
 ```
 
 ### 2.2 准备配置
@@ -71,7 +71,7 @@ docker-compose up -d
 示例（节选）：
 ```yaml
 services:
-  gemini-gateway:
+  ai-gateway:
     shm_size: "2gb"
     ports:
       - "8022:8022"
@@ -150,7 +150,7 @@ docker-compose up -d
 
 ```bash
 # 查看资源使用
-docker stats gemini-gateway
+docker stats ai-gateway
 
 # 查看日志
 docker-compose logs -f --tail=100
@@ -351,11 +351,11 @@ deploy:
 
 ```bash
 # 测试 Gemini 连通性
-docker exec gemini-gateway curl -I https://gemini.google.com
+docker exec ai-gateway curl -I https://gemini.google.com
 
 # 查看网络配置
 docker network ls
-docker inspect gemini-gateway
+docker inspect ai-gateway
 ```
 
 ## 10. 备份与恢复

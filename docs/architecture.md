@@ -1,4 +1,4 @@
-# Gemini-Gateway 架构设计文档
+# AI-Gateway 架构设计文档
 
 ## 1. 项目概述
 
@@ -546,9 +546,9 @@ CMD ["python", "-m", "app.main"]
 version: '3.8'
 
 services:
-  gemini-gateway:
+  ai-gateway:
     build: .
-    container_name: gemini-gateway
+    container_name: ai-gateway
     ports:
       - "8022:8022"
     volumes:
@@ -575,7 +575,7 @@ services:
 version: '3.8'
 
 services:
-  gemini-gateway:
+  ai-gateway:
     build: .
     # 资源限制
     deploy:
