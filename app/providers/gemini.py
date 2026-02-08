@@ -158,17 +158,17 @@ class GeminiProvider(BaseProvider):
         from gemini_webapi.constants import Model
         
         # 映射 OpenAI 风格的模型名到 Gemini 模型
+        # gemini-auto 使用 UNSPECIFIED，让 Google 后端自动选择
         model_mapping = {
             "gemini-3.0-pro": Model.G_3_0_PRO,
             "gemini-3.0-flash": Model.G_3_0_FLASH,
             "gemini-3.0-flash-thinking": Model.G_3_0_FLASH_THINKING,
-            "gemini-1.5-pro": Model.UNSPECIFIED,  # 默认模型
-            "gemini-1.5-flash": Model.UNSPECIFIED,
+            "gemini-auto": Model.UNSPECIFIED,  # 自动选择（默认）
         }
         
         # 返回配置的模型
         models = []
-        for model_name in self.models or ["gemini-1.5-pro"]:
+        for model_name in self.models or ["gemini-auto"]:
             models.append({
                 "id": model_name,
                 "object": "model",

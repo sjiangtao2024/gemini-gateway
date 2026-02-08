@@ -32,9 +32,12 @@ gemini:
   auto_refresh: true
   timeout: 30
   models:
-    - "gemini-1.5-pro"
-    - "gemini-1.5-flash"
-  proxy: null  # 例如: "http://proxy:8080"
+    # Gemini 3.0 系列（指定版本）
+    - "gemini-3.0-pro"
+    - "gemini-3.0-flash"
+    - "gemini-3.0-flash-thinking"
+    # gemini-auto: 使用 Model.UNSPECIFIED，让 Google 后端自动选择最佳模型
+    - "gemini-auto"
 
 # g4f (GPT4Free) 配置
 g4f:
@@ -45,5 +48,9 @@ g4f:
   model_prefixes:
     - "g4f-"
     - "chatgpt-"
-    - "gpt-4"
-    - "claude-
+    - "gpt-5"     # 包含 gpt-5-2, gpt-5-1, gpt-5 系列
+    - "gpt-4"     # 包含 gpt-4.5, gpt-4.1, gpt-4o 系列
+    - "o1"        # 包含 o1, o1-mini
+    - "o3"        # 包含 o3-mini, o3-mini-high
+    - "o4"        # 包含 o4-mini, o4-mini-high
+    - "claude-"
