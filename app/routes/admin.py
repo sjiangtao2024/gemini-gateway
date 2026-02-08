@@ -175,9 +175,14 @@ async def upload_har(
     file: UploadFile = File(...),
     provider: str | None = Form(None)
 ):
-    """上传 HAR 文件
+    """上传 HAR 文件（自动验证）
     
     provider: 可选，如 'openai', 'google' 等，用于命名文件
+    
+    验证内容：
+    - 是否为有效的 JSON 格式
+    - 是否包含标准的 HAR 结构 (log.entries)
+    - 对于 ChatGPT HAR，检查是否包含 authorization 头或 cookies
     """
     if _file_manager is None:
         raise HTTPException(status_code=503, detail="File manager not configured")
@@ -186,11 +191,15 @@ async def upload_har(
         result = await _file_manager.save_har(file, provider)
         return {
             "status": "success",
-            "message": "HAR file uploaded successfully",
+            "message": result.get("validation", {}).get("message", "HAR file uploaded successfully"),
             "data": result
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # 验证失败，返回详细的错误信息
+        error_msg = str(e)
+        if "HAR validation failed" in error_msg:
+            raise HTTPException(status_code=400, detail=error_msg.replace("HAR validation failed: ", ""))
+        raise HTTPException(status_code=400, detail=error_msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save HAR: {e}")
 
