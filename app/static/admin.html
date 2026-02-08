@@ -226,11 +226,16 @@
                     <p>修改后点击"保存"，服务会自动重新加载。</p>
                 </div>
                 <div class="form-group">
-                    <label for="gemini-cookie">cookies.json 内容</label>
+                    <label for="gemini-cookie">cookies.json 内容（可直接编辑）</label>
                     <textarea id="gemini-cookie" placeholder='{
-  "__Secure-1PSID": "你的PSID值",
-  "__Secure-1PSIDTS": "你的PSIDTS值"
-}'></textarea>
+  "__Secure-1PSID": "g.a000xxxxx...",
+  "__Secure-1PSIDTS": "sidts-xxx...",
+  "updated_at": "2024-01-01T00:00:00"
+}'>{
+  "__Secure-1PSID": "",
+  "__Secure-1PSIDTS": "",
+  "updated_at": ""
+}</textarea>
                 </div>
                 <button class="btn btn-primary" onclick="loadGeminiCookie()">📂 加载当前 Cookie</button>
                 <button class="btn btn-success" onclick="saveGeminiCookie()">💾 保存 Cookie</button>
@@ -339,10 +344,10 @@
             }, 5000);
         }
 
-        // 加载 Gemini Cookie
+        // 加载 Gemini Cookie（实际内容）
         async function loadGeminiCookie() {
             try {
-                const response = await fetch('/admin/cookies/status', {
+                const response = await fetch('/admin/cookies/content', {
                     headers: getHeaders()
                 });
                 
@@ -352,15 +357,15 @@
                 
                 const data = await response.json();
                 
-                // 构建 JSON 内容
+                // 直接显示实际值（可编辑）
                 const cookieContent = {
-                    "__Secure-1PSID": data.has_psid ? "已设置 (请重新输入查看)" : "",
-                    "__Secure-1PSIDTS": data.has_psidts ? "已设置 (请重新输入查看)" : "",
+                    "__Secure-1PSID": data["__Secure-1PSID"] || "",
+                    "__Secure-1PSIDTS": data["__Secure-1PSIDTS"] || "",
                     "updated_at": data.updated_at || new Date().toISOString()
                 };
                 
                 document.getElementById('gemini-cookie').value = JSON.stringify(cookieContent, null, 2);
-                showStatus('gemini-status', '已加载当前状态，请编辑后保存', 'success');
+                showStatus('gemini-status', '已加载当前 Cookie，请编辑后保存', 'success');
             } catch (error) {
                 showStatus('gemini-status', '加载失败: ' + error.message, 'error');
             }

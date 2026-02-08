@@ -159,6 +159,34 @@ async def cookie_status():
         raise HTTPException(status_code=500, detail=f"Failed to read cookie status: {e}")
 
 
+@router.get("/admin/cookies/content")
+async def cookie_content():
+    """获取 Cookie 实际内容（用于编辑）"""
+    global _gemini
+
+    if _gemini is None:
+        raise HTTPException(status_code=503, detail="Gemini provider not configured")
+
+    try:
+        cookie_path = _gemini.cookie_path
+        if not Path(cookie_path).exists():
+            # 返回空模板
+            return {
+                "__Secure-1PSID": "",
+                "__Secure-1PSIDTS": "",
+                "updated_at": None
+            }
+
+        data = json.loads(Path(cookie_path).read_text(encoding="utf-8"))
+        return {
+            "__Secure-1PSID": data.get("__Secure-1PSID", ""),
+            "__Secure-1PSIDTS": data.get("__Secure-1PSIDTS", ""),
+            "updated_at": data.get("updated_at")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read cookie content: {e}")
+
+
 @router.post("/admin/logging")
 async def set_log_level(payload: LogLevelUpdate):
     """切换日志级别 (DEBUG/INFO/WARNING/ERROR)"""
