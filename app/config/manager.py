@@ -1,7 +1,7 @@
 import yaml
 from pathlib import Path
 
-from app.config.settings import Settings, ServerSettings, AuthSettings, GeminiSettings, G4FSettings
+from app.config.settings import Settings, ServerSettings, AuthSettings, GeminiSettings, G4FSettings, LoggingSettings
 
 
 class ConfigManager:
@@ -22,6 +22,7 @@ class ConfigManager:
         self.settings = Settings(
             server=ServerSettings(**data.get("server", {})),
             auth=AuthSettings(**data.get("auth", {})),
+            logging=LoggingSettings(**data.get("logging", {})),
             gemini=GeminiSettings(**data.get("gemini", {})),
             g4f=G4FSettings(**data.get("g4f", {}))
         )
