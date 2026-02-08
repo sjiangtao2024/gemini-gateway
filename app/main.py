@@ -19,6 +19,7 @@ from app.routes.files import configure as configure_files
 from app.routes.files import router as files_router
 from app.routes.openai import configure as configure_openai
 from app.routes.openai import router as openai_router
+from app.services.file_manager import FileManager
 from app.services.logger import logger, log_manager
 
 config_manager = None
@@ -86,7 +87,13 @@ if g4f_provider is not None:
 configure_openai(gemini_provider, g4f_provider, settings.gemini.models)
 configure_claude(settings.gemini.models, g4f_models, gemini_provider, g4f_provider)
 configure_files(gemini_provider)
-configure_admin(config_manager, gemini_provider, g4f_provider)
+
+# 初始化文件管理器 - 支持本地和 Docker 环境
+har_cookies_path = os.getenv("HAR_COOKIES_PATH", "/app/har_and_cookies")
+file_manager = FileManager(base_dir=har_cookies_path)
+
+# 配置 admin 路由
+configure_admin(config_manager, gemini_provider, g4f_provider, file_manager)
 
 
 @app.on_event("shutdown")
