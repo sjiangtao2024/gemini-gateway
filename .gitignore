@@ -29,3 +29,6 @@ cookies/
 build/
 dist/
 *.egg-info/
+
+# Agent rules (symlink)
+agent-rules/
