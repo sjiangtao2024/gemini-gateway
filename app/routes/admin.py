@@ -19,7 +19,14 @@ _file_manager: FileManager | None = None
 
 
 class CookieUpdate(BaseModel):
-    __Secure_1PSID: str
+    """Gemini Cookie 更新请求
+    
+    使用 model_config 允许任意字段名（包括带连字符的）
+    """
+    model_config = {"extra": "allow"}
+    
+    # 可选的辅助字段，实际使用 get 方法获取
+    __Secure_1PSID: str = ""
     __Secure_1PSIDTS: str | None = None
 
 
@@ -101,10 +108,20 @@ async def update_cookies(cookies: CookieUpdate):
     if _gemini is None:
         raise HTTPException(status_code=503, detail="Gemini provider not configured")
 
+    # 获取原始数据（支持带连字符的字段名）
+    data = cookies.model_dump()
+    
+    # 获取 cookie 值（支持 __Secure-1PSID 和 __Secure_1PSID 两种格式）
+    psid = data.get("__Secure-1PSID") or data.get("__Secure_1PSID", "")
+    psidts = data.get("__Secure-1PSIDTS") or data.get("__Secure_1PSIDTS", "")
+    
+    if not psid:
+        raise HTTPException(status_code=400, detail="Missing __Secure-1PSID")
+
     # 保存到 cookie 文件
     cookie_data = {
-        "__Secure-1PSID": cookies.__Secure_1PSID,
-        "__Secure-1PSIDTS": cookies.__Secure_1PSIDTS or "",
+        "__Secure-1PSID": psid,
+        "__Secure-1PSIDTS": psidts,
         "updated_at": datetime.now().isoformat()
     }
 
