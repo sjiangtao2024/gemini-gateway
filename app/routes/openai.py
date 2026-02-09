@@ -322,7 +322,8 @@ async def images(payload: ImageGenerationRequest):
         images = await _g4f.generate_images(
             prompt=prompt,
             model=model,
-            n=payload.n
+            n=payload.n,
+            size=payload.size
         )
         
         # 格式化响应
