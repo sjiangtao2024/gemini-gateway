@@ -179,13 +179,13 @@ async def list_models(type: str | None = None):
     # g4f 聊天模型（仅在 chat 或全部模式下返回）
     if type in (None, "chat") and _g4f is not None:
         try:
-            g4f_models = await _g4f.list_models()
+            g4f_models = _g4f.list_models()  # 同步方法，不需要 await
             for m in g4f_models:
                 if m["id"] not in g4f_image_models:
                     m["capabilities"] = ["chat"]
                     data.append(m)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to list g4f models: {e}")
     
     return {"object": "list", "data": data}
 

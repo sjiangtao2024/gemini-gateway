@@ -387,19 +387,9 @@
                 <div class="two-column">
                     <div>
                         <div class="form-group">
-                            <label for="claude-model">选择模型</label>
+                            <label for="claude-model">选择模型 <small>(点击"加载模型列表"获取最新)</small></label>
                             <select id="claude-model">
-                                <optgroup label="Gemini (Google)">
-                                    <option value="gemini-auto">gemini-auto (自动选择)</option>
-                                    <option value="gemini-3.0-pro" selected>gemini-3.0-pro</option>
-                                    <option value="gemini-3.0-flash">gemini-3.0-flash</option>
-                                    <option value="gemini-3.0-flash-thinking">gemini-3.0-flash-thinking</option>
-                                </optgroup>
-                                <optgroup label="GPT Models (g4f)">
-                                    <option value="gpt-4o">gpt-4o</option>
-                                    <option value="gpt-4">gpt-4</option>
-                                    <option value="gpt-5-2">gpt-5-2</option>
-                                </optgroup>
+                                <option value="gemini-3.0-pro" selected>gemini-3.0-pro</option>
                             </select>
                         </div>
 
@@ -573,8 +563,43 @@
                     imageSelect.appendChild(optgroup);
                 }
                 
+                // 更新 Claude 模型选择器
+                const claudeSelect = document.getElementById('claude-model');
+                claudeSelect.innerHTML = '';
+                
+                // 按 provider 分组
+                const geminiClaude = chatData.data.filter(m => m.owned_by === 'google');
+                const g4fClaude = chatData.data.filter(m => m.owned_by === 'g4f');
+                
+                // Gemini 模型
+                if (geminiClaude.length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = 'Gemini (Google)';
+                    geminiClaude.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.id;
+                        if (model.id === 'gemini-3.0-pro') option.selected = true;
+                        optgroup.appendChild(option);
+                    });
+                    claudeSelect.appendChild(optgroup);
+                }
+                
+                // g4f 模型
+                if (g4fClaude.length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = 'GPT Models (g4f)';
+                    g4fClaude.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.id;
+                        optgroup.appendChild(option);
+                    });
+                    claudeSelect.appendChild(optgroup);
+                }
+                
                 const totalModels = chatData.data.length + imageData.data.length;
-                showStatus('connection-status', '✅ 已加载 ' + totalModels + ' 个模型 (聊天: ' + chatData.data.length + ', 图像: ' + imageData.data.length + ')', 'success');
+                showStatus('connection-status', '✅ 已加载 ' + totalModels + ' 个模型 (聊天: ' + chatData.data.length + ', 图像: ' + imageData.data.length + ', Claude: ' + (geminiClaude.length + g4fClaude.length) + ')', 'success');
             } catch (error) {
                 showStatus('connection-status', '❌ 加载失败: ' + error.message, 'error');
             }

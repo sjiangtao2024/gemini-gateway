@@ -95,8 +95,13 @@ if settings.g4f.enabled:
 g4f_models: list[str] = []
 if g4f_provider is not None:
     try:
-        g4f_models = [m["id"] for m in (g4f_provider.list_models() or [])]
-    except Exception:
+        models_list = g4f_provider.list_models()
+        g4f_models = [m["id"] for m in (models_list or [])]
+        logger.info(f"Loaded {len(g4f_models)} g4f models: {g4f_models[:5]}...")
+    except Exception as e:
+        logger.error(f"Failed to load g4f models: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         g4f_models = []
 
 configure_openai(gemini_provider, g4f_provider, settings.gemini.models)
