@@ -95,7 +95,7 @@ if settings.g4f.enabled:
 g4f_models: list[str] = []
 if g4f_provider is not None:
     try:
-        g4f_models = [m["id"] for m in (asyncio.run(g4f_provider.list_models()) or [])]
+        g4f_models = [m["id"] for m in (g4f_provider.list_models() or [])]
     except Exception:
         g4f_models = []
 

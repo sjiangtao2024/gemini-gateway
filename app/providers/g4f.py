@@ -71,8 +71,11 @@ class G4FProvider(BaseProvider):
         # 默认使用 OpenaiChat
         return g4f.Provider.OpenaiChat
     
-    async def list_models(self) -> list[dict]:
-        """列出支持的模型 - 从 g4f 库动态获取"""
+    def list_models(self) -> list[dict]:
+        """列出支持的模型 - 从 g4f 库动态获取
+        
+        注意：此方法为同步方法，避免在模块级别使用 asyncio.run()
+        """
         models = []
         
         # 从 g4f.Provider.OpenaiChat 获取最新模型列表
