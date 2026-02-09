@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.providers.g4f import G4FProvider
 from app.providers.gemini import GeminiProvider
@@ -48,6 +48,20 @@ class ImageGenerationRequest(BaseModel):
     n: int = Field(default=1, ge=1, le=10)
     size: str = "1024x1024"
     response_format: Literal["url", "b64_json"] = "b64_json"
+    
+    @field_validator("model")
+    @classmethod
+    def validate_image_model(cls, v: str) -> str:
+        """验证模型是否支持图像生成"""
+        supported_models = [
+            # Gemini 模型（通过提示词触发图像生成）
+            "gemini-3.0-pro", "gemini-3.0-flash", "gemini-3.0-flash-thinking", "gemini-auto",
+            # g4f 图像模型
+            "gpt-image"
+        ]
+        if v not in supported_models:
+            raise ValueError(f"Model '{v}' does not support image generation. Supported: {supported_models}")
+        return v
 
 
 def configure(gemini: GeminiProvider | None, g4f: G4FProvider | None, gemini_models: list[str]) -> None:
@@ -111,16 +125,68 @@ def _create_openai_response(text: str, model: str) -> dict:
 
 
 @router.get("/v1/models")
-async def list_models():
-    data = [
-        {"id": model, "object": "model", "owned_by": "google"}
-        for model in _gemini_models
-    ]
-    if _g4f is not None:
+async def list_models(type: str | None = None):
+    """
+    列出可用模型
+    
+    Args:
+        type: 筛选模型类型 - "chat"(聊天) | "image"(图像生成) | None(全部)
+    """
+    # 定义模型能力
+    # Gemini 模型同时支持聊天和图像生成
+    gemini_models = ["gemini-3.0-pro", "gemini-3.0-flash", "gemini-3.0-flash-thinking", "gemini-auto"]
+    g4f_image_models = ["gpt-image"]
+    
+    data = []
+    
+    # Gemini 模型（根据 type 返回不同 capabilities）
+    if type == "chat":
+        for model in gemini_models:
+            data.append({
+                "id": model,
+                "object": "model",
+                "owned_by": "google",
+                "capabilities": ["chat", "vision"]
+            })
+    elif type == "image":
+        for model in gemini_models:
+            data.append({
+                "id": model,
+                "object": "model",
+                "owned_by": "google",
+                "capabilities": ["image_generation"]
+            })
+    else:
+        # type is None - 返回所有模型，合并 capabilities
+        for model in gemini_models:
+            data.append({
+                "id": model,
+                "object": "model",
+                "owned_by": "google",
+                "capabilities": ["chat", "vision", "image_generation"]
+            })
+    
+    # g4f 图像模型（仅在 image 或全部模式下返回）
+    if type in (None, "image") and _g4f is not None:
+        for model in g4f_image_models:
+            data.append({
+                "id": model,
+                "object": "model",
+                "owned_by": "openai-via-g4f",
+                "capabilities": ["image_generation"]
+            })
+    
+    # g4f 聊天模型（仅在 chat 或全部模式下返回）
+    if type in (None, "chat") and _g4f is not None:
         try:
-            data.extend(await _g4f.list_models())
+            g4f_models = await _g4f.list_models()
+            for m in g4f_models:
+                if m["id"] not in g4f_image_models:
+                    m["capabilities"] = ["chat"]
+                    data.append(m)
         except Exception:
             pass
+    
     return {"object": "list", "data": data}
 
 

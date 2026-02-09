@@ -326,15 +326,15 @@
             <div class="section">
                 <h2>🎨 图像生成测试</h2>
                 <div class="info-box">
-                    <p><strong>说明：</strong>使用 g4f 的 gpt-image 模型生成图像。需要有效的 ChatGPT HAR 文件。</p>
+                    <p><strong>说明：</strong>支持 Gemini 模型内置图像生成和 g4f 的 gpt-image 模型。Gemini 使用普通模型通过提示词触发；gpt-image 需要有效的 ChatGPT HAR 文件。</p>
                 </div>
 
                 <div class="two-column">
                     <div>
                         <div class="form-group">
-                            <label for="image-model">图像模型</label>
+                            <label for="image-model">图像模型 <small>(点击"加载模型列表"获取最新)</small></label>
                             <select id="image-model">
-                                <option value="gpt-image">gpt-image (ChatGPT DALL-E)</option>
+                                <option value="gemini-3.0-pro" selected>gemini-3.0-pro</option>
                             </select>
                         </div>
 
@@ -440,23 +440,59 @@
             statusEl.innerHTML = '<span class="loading"></span> 加载中...';
 
             try {
-                const response = await fetch(getApiBase() + '/v1/models', {
-                    headers: getHeaders()
-                });
-                const data = await response.json();
+                // 并行加载聊天模型和图像模型
+                const [chatResp, imageResp] = await Promise.all([
+                    fetch(getApiBase() + '/v1/models?type=chat', { headers: getHeaders() }),
+                    fetch(getApiBase() + '/v1/models?type=image', { headers: getHeaders() })
+                ]);
                 
-                // 更新模型选择器
+                const chatData = await chatResp.json();
+                const imageData = await imageResp.json();
+                
+                // 更新聊天模型选择器
                 const chatSelect = document.getElementById('chat-model');
                 chatSelect.innerHTML = '';
                 
-                data.data.forEach(model => {
+                chatData.data.forEach(model => {
                     const option = document.createElement('option');
                     option.value = model.id;
-                    option.textContent = model.id + ' (' + model.owned_by + ')';
+                    const caps = model.capabilities ? ` [${model.capabilities.join(',')}]` : '';
+                    option.textContent = model.id + ' (' + model.owned_by + ')' + caps;
                     chatSelect.appendChild(option);
                 });
                 
-                showStatus('connection-status', '✅ 已加载 ' + data.data.length + ' 个模型', 'success');
+                // 更新图像模型选择器
+                const imageSelect = document.getElementById('image-model');
+                imageSelect.innerHTML = '';
+                
+                // 按 provider 分组
+                const geminiImages = imageData.data.filter(m => m.owned_by === 'google');
+                const g4fImages = imageData.data.filter(m => m.owned_by === 'openai-via-g4f');
+                
+                // g4f 图像模型
+                g4fImages.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.id + ' (g4f ChatGPT)';
+                    imageSelect.appendChild(option);
+                });
+                
+                // Gemini 图像模型
+                if (geminiImages.length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = 'Gemini (提示词触发图像生成)';
+                    geminiImages.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.id;
+                        if (model.id === 'gemini-3.0-pro') option.selected = true;
+                        optgroup.appendChild(option);
+                    });
+                    imageSelect.appendChild(optgroup);
+                }
+                
+                const totalModels = chatData.data.length + imageData.data.length;
+                showStatus('connection-status', '✅ 已加载 ' + totalModels + ' 个模型 (聊天: ' + chatData.data.length + ', 图像: ' + imageData.data.length + ')', 'success');
             } catch (error) {
                 showStatus('connection-status', '❌ 加载失败: ' + error.message, 'error');
             }

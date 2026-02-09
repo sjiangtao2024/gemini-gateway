@@ -162,42 +162,49 @@ class GeminiProvider(BaseProvider):
     async def generate_images(self, prompt: str, model: str | None = None) -> list[dict]:
         """生成图像
         
+        Gemini 通过普通的 generate_content 调用生成图像，
+        只需在提示词中明确要求生成图像即可。
+        
         Returns:
             图像数据列表，每个元素包含 url 或 b64_json
         """
         import base64
-        import aiohttp
         
         try:
             client = await self._ensure_client()
-            selected_model = model or self.model
             
-            # 构建生图提示词
+            # 获取模型枚举
+            selected_model_name = model or self.model
+            model_enum = self._get_model_enum(selected_model_name)
+            
+            # 构建生图提示词（需要明确触发图像生成）
             image_prompt = f"Generate an image: {prompt}"
             
-            if selected_model:
-                response = await client.generate_content(image_prompt, model=selected_model)
-            else:
-                response = await client.generate_content(image_prompt)
+            response = await client.generate_content(image_prompt, model=model_enum)
             
             # 处理返回的图像
             images = []
             for img in response.images:
-                # img 是 gemini_webapi.types.Image 对象
+                # img 是 gemini_webapi.types.Image 或 GeneratedImage 对象
                 if hasattr(img, 'url') and img.url:
-                    # 下载图像数据
+                    # 使用 Image.save() 方法下载图像
                     try:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(img.url, timeout=30) as resp:
-                                if resp.status == 200:
-                                    image_bytes = await resp.read()
-                                    b64_data = base64.b64encode(image_bytes).decode('utf-8')
-                                    images.append({"b64_json": b64_data})
-                                else:
-                                    # 如果下载失败，返回 URL
-                                    images.append({"url": img.url})
+                        import asyncio
+                        # save 是异步方法，需要 await
+                        saved_path = await img.save(path="/tmp", verbose=False)
+                        if saved_path:
+                            # 读取保存的文件并转为 base64
+                            with open(saved_path, "rb") as f:
+                                image_bytes = f.read()
+                            b64_data = base64.b64encode(image_bytes).decode('utf-8')
+                            images.append({"b64_json": b64_data})
+                            # 清理临时文件
+                            import os
+                            os.unlink(saved_path)
+                        else:
+                            images.append({"url": img.url})
                     except Exception as e:
-                        # 下载失败时返回 URL
+                        logger.warning(f"Failed to download image: {e}, using URL")
                         images.append({"url": img.url})
                 else:
                     images.append({"url": ""})
