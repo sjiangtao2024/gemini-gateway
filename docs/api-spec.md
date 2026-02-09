@@ -26,6 +26,11 @@ GET /v1/models
 Authorization: Bearer <token>
 ```
 
+**查询参数**:
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `type` | string | 可选，筛选模型类型：`chat`(聊天)、`image`(图像生成) |
+
 **动态聚合流程（示意）**:
 ```
 g4f /v1/providers  →  过滤 providers 白名单
@@ -41,52 +46,64 @@ g4f /v1/providers/{id}  →  聚合 models
   "object": "list",
   "data": [
     {
-      "id": "gemini-2.5-pro",
+      "id": "gemini-3.0-pro",
       "object": "model",
-      "created": 1677610602,
-      "owned_by": "google"
+      "owned_by": "google",
+      "capabilities": ["chat", "vision", "image_generation"]
     },
     {
       "id": "gpt-4o",
       "object": "model",
-      "created": 1677610602,
-      "owned_by": "openai"
+      "owned_by": "g4f",
+      "capabilities": ["chat"]
     },
     {
-      "id": "qwen-*",
+      "id": "gpt-image",
       "object": "model",
-      "created": 1677610602,
-      "owned_by": "g4f"
-    },
-    {
-      "id": "kimi-*",
-      "object": "model",
-      "created": 1677610602,
-      "owned_by": "g4f"
-    },
-    {
-      "id": "glm-*",
-      "object": "model",
-      "created": 1677610602,
-      "owned_by": "g4f"
-    },
-    {
-      "id": "minimax-*",
-      "object": "model",
-      "created": 1677610602,
-      "owned_by": "g4f"
-    },
-    {
-      "id": "grok-*",
-      "object": "model",
-      "created": 1677610602,
-      "owned_by": "g4f"
+      "owned_by": "openai-via-g4f",
+      "capabilities": ["image_generation"]
     }
   ]
 }
 ```
 
-> 说明：模型列表来自当前配置与 provider 可用性。网关会从 g4f `/v1/providers/{id}` 聚合模型，并按 `g4f.providers`（白名单）与 `g4f.model_prefixes`（前缀规则）过滤后返回。g4f 相关模型可能需要额外认证（API Key/Cookies）且会随 provider 状态变化。
+**按类型筛选示例**:
+```http
+# 仅聊天模型
+GET /v1/models?type=chat
+
+# 仅图像生成模型
+GET /v1/models?type=image
+```
+
+**图像生成模型列表响应**:
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gemini-3.0-pro",
+      "object": "model",
+      "owned_by": "google",
+      "capabilities": ["image_generation"]
+    },
+    {
+      "id": "gemini-3.0-flash",
+      "object": "model",
+      "owned_by": "google",
+      "capabilities": ["image_generation"]
+    },
+    {
+      "id": "gpt-image",
+      "object": "model",
+      "owned_by": "openai-via-g4f",
+      "capabilities": ["image_generation"]
+    }
+  ]
+}
+```
+
+> 说明：模型列表包含 `capabilities` 字段标识能力：`chat`(聊天)、`vision`(视觉)、`image_generation`(图像生成)。网关会从 g4f `/v1/providers/{id}` 聚合模型，并按 `g4f.providers`（白名单）与 `g4f.model_prefixes`（前缀规则）过滤后返回。
 
 ### 2.2 聊天完成
 
@@ -156,6 +173,13 @@ data: [DONE]
 
 ### 2.3 图片生成（OpenAI 兼容）
 
+**支持的模型**:
+- **Gemini 模型**（内置图像生成）: `gemini-3.0-pro`, `gemini-3.0-flash`, `gemini-3.0-flash-thinking`, `gemini-auto`
+  - 通过提示词触发图像生成能力
+  - 使用已配置的 Gemini cookies
+- **g4f 模型**: `gpt-image`
+  - 需要有效的 ChatGPT HAR 文件（包含 authorization 和 proof_token）
+
 **请求**:
 ```http
 POST /v1/images
@@ -163,7 +187,7 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "model": "gemini-2.5-pro",
+  "model": "gemini-3.0-pro",
   "prompt": "A futuristic city at sunset",
   "n": 1,
   "size": "1024x1024",
@@ -187,12 +211,26 @@ Content-Type: application/json
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `model` | string | 是 | 图像模型 ID（由模型白名单与前缀规则控制） |
+| `model` | string | 是 | 图像模型 ID，支持：`gemini-3.0-pro`, `gemini-3.0-flash`, `gemini-3.0-flash-thinking`, `gemini-auto`, `gpt-image` |
 | `prompt` | string | 是 | 生成提示词 |
-| `n` | integer | 否 | 生成数量，默认 1 |
-| `size` | string | 否 | 图像尺寸（如 `512x512`, `1024x1024`） |
+| `n` | integer | 否 | 生成数量，默认 1，最大 10 |
+| `size` | string | 否 | 图像尺寸（如 `512x512`, `1024x1024`），部分模型可能忽略 |
 | `response_format` | string | 否 | `url` 或 `b64_json`，默认 `b64_json` |
 | `user` | string | 否 | 透传字段，用于审计或限流 |
+
+**模型验证错误**:
+如果传入不支持图像生成的模型，返回 422 错误：
+```json
+{
+  "detail": [
+    {
+      "type": "value_error",
+      "loc": ["body", "model"],
+      "msg": "Model 'gpt-4' does not support image generation. Supported: ['gemini-3.0-pro', 'gemini-3.0-flash', 'gemini-3.0-flash-thinking', 'gemini-auto', 'gpt-image']"
+    }
+  ]
+}
+```
 
 **兼容性说明（差异）**:
 - 仅支持“生成”场景；编辑/变体类能力如需支持会另行扩展。

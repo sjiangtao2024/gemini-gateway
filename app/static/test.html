@@ -237,6 +237,7 @@
         <div class="tabs">
             <div class="tab active" onclick="switchTab('chat')">💬 对话测试</div>
             <div class="tab" onclick="switchTab('image')">🎨 图像生成</div>
+            <div class="tab" onclick="switchTab('claude')">🅒 Claude API</div>
         </div>
 
         <!-- 对话测试 -->
@@ -373,9 +374,90 @@
                 </div>
             </div>
         </div>
+
+        <!-- Claude API 测试 -->
+        <div id="claude-tab" class="tab-content">
+            <div class="section">
+                <h2>🅒 Claude API 测试</h2>
+                <div class="info-box">
+                    <p><strong>说明：</strong>测试 Anthropic Claude 兼容 API。端点为 <code>/v1/messages</code>，支持 Gemini 和 g4f 模型。</p>
+                    <p>Claude 格式特点：system 是独立字段（不是 message 中的 role），content 是数组格式。</p>
+                </div>
+
+                <div class="two-column">
+                    <div>
+                        <div class="form-group">
+                            <label for="claude-model">选择模型</label>
+                            <select id="claude-model">
+                                <optgroup label="Gemini (Google)">
+                                    <option value="gemini-auto">gemini-auto (自动选择)</option>
+                                    <option value="gemini-3.0-pro" selected>gemini-3.0-pro</option>
+                                    <option value="gemini-3.0-flash">gemini-3.0-flash</option>
+                                    <option value="gemini-3.0-flash-thinking">gemini-3.0-flash-thinking</option>
+                                </optgroup>
+                                <optgroup label="GPT Models (g4f)">
+                                    <option value="gpt-4o">gpt-4o</option>
+                                    <option value="gpt-4">gpt-4</option>
+                                    <option value="gpt-5-2">gpt-5-2</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="claude-system">System Prompt (可选)</label>
+                            <textarea id="claude-system" placeholder="输入系统提示词..." rows="2">You are a helpful assistant.</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="claude-max-tokens">Max Tokens</label>
+                            <input type="number" id="claude-max-tokens" value="1024" min="1" max="8192">
+                        </div>
+
+                        <div class="form-group">
+                            <label>消息历史</label>
+                            <div class="chat-history" id="claude-history">
+                                <div class="chat-message user">
+                                    <div class="role">User</div>
+                                    <div>Hello! Can you help me?</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="claude-message">输入消息</label>
+                            <textarea id="claude-message" placeholder="输入你的消息..." rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="claude-stream"> 流式响应 (Stream)
+                            </label>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="sendClaudeMessage()">📤 发送消息</button>
+                        <button class="btn btn-danger" onclick="clearClaudeHistory()">🗑️ 清空对话</button>
+                        <div id="claude-status"></div>
+                    </div>
+
+                    <div>
+                        <div class="form-group">
+                            <label>Claude 格式请求/响应</label>
+                            <div class="result-box">
+                                <pre id="claude-raw">点击"发送消息"查看 Claude 格式的请求和响应详情...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
+        // Claude 对话历史
+        let claudeHistory = [
+            {role: "user", content: "Hello! Can you help me?"}
+        ];
+
         // 全局对话历史
         let chatHistory = [
             {role: "system", content: "你是一个 helpful assistant。"}
@@ -519,6 +601,143 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // 更新 Claude 对话历史显示
+        function updateClaudeHistory() {
+            const container = document.getElementById('claude-history');
+            container.innerHTML = '';
+            
+            claudeHistory.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'chat-message ' + msg.role;
+                div.innerHTML = `<div class="role">${msg.role}</div><div>${escapeHtml(msg.content)}</div>`;
+                container.appendChild(div);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 发送 Claude 消息
+        async function sendClaudeMessage() {
+            const messageInput = document.getElementById('claude-message');
+            const message = messageInput.value.trim();
+            const model = document.getElementById('claude-model').value;
+            const system = document.getElementById('claude-system').value.trim();
+            const maxTokens = parseInt(document.getElementById('claude-max-tokens').value);
+            const stream = document.getElementById('claude-stream').checked;
+            
+            if (!message) {
+                showStatus('claude-status', '请输入消息', 'error');
+                return;
+            }
+
+            const statusEl = document.getElementById('claude-status');
+            statusEl.innerHTML = '<span class="loading"></span> 发送中...';
+
+            // 添加用户消息到历史
+            claudeHistory.push({role: "user", content: message});
+            updateClaudeHistory();
+            messageInput.value = '';
+
+            // 构建 Claude 格式请求
+            const requestBody = {
+                model: model,
+                messages: claudeHistory,
+                system: system || undefined,
+                max_tokens: maxTokens,
+                stream: stream
+            };
+
+            // 移除 undefined 字段
+            Object.keys(requestBody).forEach(key => {
+                if (requestBody[key] === undefined) delete requestBody[key];
+            });
+
+            try {
+                const response = await fetch(getApiBase() + '/v1/messages', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(requestBody)
+                });
+
+                let responseText = '';
+                let rawDisplay = '=== Claude 请求 ===\n' + JSON.stringify(requestBody, null, 2);
+
+                if (stream) {
+                    // 流式响应处理
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullContent = '';
+                    let streamData = [];
+                    
+                    while (true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        streamData.push(chunk);
+                        
+                        // 解析 SSE 数据
+                        const lines = chunk.split('\n');
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                        fullContent += parsed.delta.text;
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                    
+                    responseText = fullContent;
+                    rawDisplay += '\n\n=== Claude 流式响应 ===\n' + streamData.join('');
+                    
+                    // 添加助手回复到历史
+                    if (fullContent) {
+                        claudeHistory.push({role: "assistant", content: fullContent});
+                        updateClaudeHistory();
+                    }
+                    
+                    showStatus('claude-status', '✅ 流式响应完成', 'success');
+                } else {
+                    // 非流式响应
+                    const data = await response.json();
+                    rawDisplay += '\n\n=== Claude 响应 ===\n' + JSON.stringify(data, null, 2);
+                    
+                    if (data.error) {
+                        showStatus('claude-status', '❌ 错误: ' + data.error.message, 'error');
+                    } else if (data.content && data.content.length > 0) {
+                        responseText = data.content[0].text;
+                        // 添加助手回复到历史
+                        claudeHistory.push({role: "assistant", content: responseText});
+                        updateClaudeHistory();
+                        showStatus('claude-status', '✅ 成功', 'success');
+                    } else {
+                        showStatus('claude-status', '⚠️ 空响应', 'warning');
+                    }
+                }
+
+                document.getElementById('claude-raw').textContent = rawDisplay;
+
+            } catch (error) {
+                showStatus('claude-status', '❌ 请求失败: ' + error.message, 'error');
+                document.getElementById('claude-raw').textContent = 
+                    '=== Claude 请求 ===\n' + JSON.stringify(requestBody, null, 2) + 
+                    '\n\n=== 错误 ===\n' + error.message;
+            }
+        }
+
+        // 清空 Claude 对话历史
+        function clearClaudeHistory() {
+            claudeHistory = [];
+            updateClaudeHistory();
+            document.getElementById('claude-raw').textContent = '点击"发送消息"查看 Claude 格式的请求和响应详情...';
+            showStatus('claude-status', '对话已清空', 'success');
         }
 
         // 发送消息
